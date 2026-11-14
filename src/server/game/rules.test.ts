@@ -36,8 +36,12 @@ function start(n: number, seed = 1): GameState {
   );
 }
 
-function idsOfRole(state: GameState, role: Role): string[] {
-  return state.players.filter((p) => p.role === role).map((p) => p.playerId);
+type Ids = [string, string, string, string, string, string];
+
+function idsOfRole(state: GameState, role: Role): Ids {
+  return state.players
+    .filter((p) => p.role === role)
+    .map((p) => p.playerId) as Ids;
 }
 
 function eliminateAndAdvance(state: GameState, playerId: string): GameState {

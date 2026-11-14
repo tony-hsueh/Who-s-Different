@@ -169,21 +169,58 @@ describe('pickQuestion', () => {
     }
   });
 
-  it('picks the least recently used pair once every pair has been used', () => {
+  it('starts a new round outside the last N once every pair has been used', () => {
     const bank = makeBank(15);
-    // q0 was used again after q1, so q1 is the oldest outside the last 10.
-    const recentIds = [
-      'q0',
-      'q1',
-      'q2',
-      'q3',
-      'q4',
-      'q0',
-      ...bank.slice(5).map((q) => q.id),
-    ];
-    for (const r of [0, 0.5, 0.99]) {
-      expect(pickQuestion({ bank, recentIds, rng: () => r }).id).toBe('q1');
+    // Round 1 done; the last 10 are q5..q14, so round 2 opens with q0..q4.
+    const recentIds = bank.map((q) => q.id);
+    const picked = new Set<string>();
+    for (let i = 0; i < 5; i++) {
+      const r = (i + 0.5) / 5;
+      picked.add(pickQuestion({ bank, recentIds, rng: () => r }).id);
     }
+    expect(picked).toEqual(new Set(['q0', 'q1', 'q2', 'q3', 'q4']));
+  });
+
+  it('uses every pair exactly once in each round', () => {
+    const rng = seededRng(7);
+    const recentIds: string[] = [];
+    const rounds = 5;
+    for (let i = 0; i < questionBank.length * rounds; i++) {
+      recentIds.push(pickQuestion({ bank: questionBank, recentIds, rng }).id);
+    }
+    const all = new Set(questionBank.map((q) => q.id));
+    for (let round = 0; round < rounds; round++) {
+      const ids = recentIds.slice(
+        round * questionBank.length,
+        (round + 1) * questionBank.length,
+      );
+      expect(new Set(ids)).toEqual(all);
+    }
+  });
+
+  it('picks only pairs not yet used this round', () => {
+    const bank = makeBank(15);
+    // Round 2 has used q0..q2 so far. Window of 10 covers q8..q14 and q0..q2,
+    // and q0..q2 are used this round, so only q3..q7 are allowed.
+    const recentIds = [...bank.map((q) => q.id), 'q0', 'q1', 'q2'];
+    const picked = new Set<string>();
+    for (let i = 0; i < 5; i++) {
+      const r = (i + 0.5) / 5;
+      picked.add(pickQuestion({ bank, recentIds, rng: () => r }).id);
+    }
+    expect(picked).toEqual(new Set(['q3', 'q4', 'q5', 'q6', 'q7']));
+  });
+
+  it('does not replay the first round order in the second round', () => {
+    const rng = seededRng(99);
+    const recentIds: string[] = [];
+    for (let i = 0; i < questionBank.length * 2; i++) {
+      recentIds.push(pickQuestion({ bank: questionBank, recentIds, rng }).id);
+    }
+    const first = recentIds.slice(0, questionBank.length);
+    const second = recentIds.slice(questionBank.length);
+    expect(new Set(first).size).toBe(questionBank.length);
+    expect(second).not.toEqual(first);
   });
 
   it('keeps picking after the bank runs out, without throwing or repeating within the window', () => {

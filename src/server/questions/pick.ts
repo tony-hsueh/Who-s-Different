@@ -20,25 +20,17 @@ export function pickQuestion({
   const excluded = new Set(n > 0 ? recentIds.slice(-n) : []);
   const candidates = bank.filter((q) => !excluded.has(q.id));
 
-  const used = new Set(recentIds);
-  const unused = candidates.filter((q) => !used.has(q.id));
-  if (unused.length > 0) {
-    const index = Math.min(
-      Math.floor(rng() * unused.length),
-      unused.length - 1,
-    );
-    return unused[index]!;
-  }
-
-  // Every candidate was used before: take the least recently used one.
-  let best = candidates[0]!;
-  let bestLast = recentIds.lastIndexOf(best.id);
-  for (const q of candidates) {
-    const last = recentIds.lastIndexOf(q.id);
-    if (last < bestLast) {
-      best = q;
-      bestLast = last;
-    }
-  }
-  return best;
+  // A round is bank.length picks. Within a round every pair comes up once.
+  // Assumes the bank does not change during a room's life (it only changes
+  // on deploy, which resets rooms).
+  const playedThisRound = recentIds.length % bank.length;
+  const usedThisRound = new Set(
+    playedThisRound > 0 ? recentIds.slice(-playedThisRound) : [],
+  );
+  const unused = candidates.filter((q) => !usedThisRound.has(q.id));
+  // Only empty when recentIds does not follow the round shape (e.g. ids
+  // from an older bank); fall back to any pair outside the last N.
+  const pool = unused.length > 0 ? unused : candidates;
+  const index = Math.min(Math.floor(rng() * pool.length), pool.length - 1);
+  return pool[index]!;
 }

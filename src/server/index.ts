@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
+import { questionBank } from './questions/bank.js';
+import { validateBank } from './questions/validate.js';
 
 const port = Number(process.env.PORT ?? 3000);
 
@@ -8,6 +10,9 @@ const port = Number(process.env.PORT ?? 3000);
 // Under `tsx src/server/index.ts` the same path misses, so dev serves no UI.
 const builtClient = fileURLToPath(new URL('../../client', import.meta.url));
 const clientDir = existsSync(builtClient) ? builtClient : undefined;
+
+// A bad bank must stop the server from starting.
+validateBank(questionBank);
 
 const { httpServer } = createApp({ clientDir });
 httpServer.listen(port, '0.0.0.0', () => {

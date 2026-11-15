@@ -2,10 +2,10 @@ import type { GameState, RuleResult } from '../../shared/game-types.js';
 import type { Ack, AckFailure } from '../../shared/protocol.js';
 import { requireHost } from '../auth.js';
 import { broadcastRoom } from '../broadcast.js';
-import { eliminate, nextRound, skipRound } from '../game/rules.js';
+import { countAlive, eliminate, nextRound, skipRound } from '../game/rules.js';
 import type { LogEvent } from '../log/noop-logger.js';
 import { phaseOf, type Room } from '../rooms/room-store.js';
-import { handle, logSafely, type HandlerEnv } from './handle.js';
+import { handle, logSafely, recordPrivate, type HandlerEnv } from './handle.js';
 
 const ok: Ack<null> = { ok: true, data: null };
 
@@ -56,11 +56,38 @@ export function registerGameHandlers(env: HandlerEnv): void {
     const started = store.startGame(host.roomId);
     if (!started.ok) return started;
     broadcastRoom(io, started.room);
+    const { game } = started.room;
+    const fields = gameFields(started.room);
     log({
       type: 'GAME_STARTED',
-      ...gameFields(started.room),
-      payload: { playerCount: started.room.players.length },
+      ...fields,
+      payload: {
+        playerCount: started.room.players.length,
+        minorityCount: game?.players.filter((p) => p.role === 'minority')
+          .length,
+      },
     });
+    if (game) {
+      log({
+        type: 'WORDS_ASSIGNED',
+        ...fields,
+        payload: {
+          questionPairId: game.questionPairId,
+          playerCount: game.players.length,
+        },
+      });
+      recordPrivate(logger, {
+        gameId: game.gameId,
+        questionPairId: game.questionPairId,
+        majorityWord: game.majorityWord,
+        minorityWord: game.minorityWord,
+        assignments: game.players.map((p) => ({
+          playerId: p.playerId,
+          role: p.role,
+        })),
+      });
+    }
+    log({ type: 'ROUND_STARTED', ...fields, payload: {} });
     return ok;
   });
 
@@ -75,14 +102,29 @@ export function registerGameHandlers(env: HandlerEnv): void {
     const result = advance(room, (game) => eliminate(game, playerId));
     if (!result.ok) return result;
     const { game } = result.room;
-    const base = { ...gameFields(result.room), playerId };
+    const base = { ...gameFields(result.room), playerId, roundNumber };
+    log({ type: 'ELIMINATION_CONFIRMED', ...base, payload: {} });
+    if (!game) return ok;
+    const target = game.players.find((p) => p.playerId === playerId);
     log({
       type: 'PLAYER_ELIMINATED',
       ...base,
-      roundNumber,
-      payload: { phase: game?.phase },
+      payload: {
+        gameId: game.gameId,
+        round: roundNumber,
+        eliminatedPlayerId: playerId,
+        role: target?.role,
+        remaining: countAlive(game),
+        winReached: game.phase === 'finished',
+        winner: game.winner,
+      },
     });
-    if (game?.phase === 'finished') {
+    if (game.phase === 'finished') {
+      log({
+        type: 'WIN_CONDITION_MET',
+        ...base,
+        payload: { winner: game.winner, remaining: countAlive(game) },
+      });
       log({ type: 'GAME_FINISHED', ...base, payload: { winner: game.winner } });
     }
     return ok;
@@ -128,7 +170,7 @@ export function registerGameHandlers(env: HandlerEnv): void {
     const reset = store.resetGame(host.roomId);
     if (!reset.ok) return reset;
     broadcastRoom(io, reset.room);
-    log({ type: 'GAME_RESET', roomId: reset.room.roomId, payload: {} });
+    log({ type: 'GAME_RESET', ...gameFields(room), payload: {} });
     return ok;
   });
 }

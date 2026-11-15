@@ -8,7 +8,11 @@ import type {
 } from '../../shared/protocol.js';
 import type { Binding, SocketData } from '../auth.js';
 import type { AppServer } from '../broadcast.js';
-import type { EventLogger, LogEvent } from '../log/noop-logger.js';
+import type {
+  EventLogger,
+  LogEvent,
+  PrivateGameRecord,
+} from '../log/noop-logger.js';
 import type { RateLimiter } from '../rate-limit.js';
 import type { RoomStore } from '../rooms/room-store.js';
 import { schemas } from './validate.js';
@@ -33,6 +37,17 @@ export function logSafely(logger: EventLogger, event: LogEvent): void {
     logger.logEvent(event);
   } catch (error) {
     console.error('event logger failed', error);
+  }
+}
+
+export function recordPrivate(
+  logger: EventLogger,
+  record: PrivateGameRecord,
+): void {
+  try {
+    logger.recordPrivateGame?.(record);
+  } catch (error) {
+    console.error('private game record failed', error);
   }
 }
 
@@ -72,6 +87,16 @@ export function handle<E extends keyof Requests>(
           result = run(parsed.data, env.socket.data.binding);
         } catch (error) {
           console.error(`handler for ${event} failed`, error);
+          const bound = env.socket.data.binding;
+          logSafely(env.logger, {
+            type: 'SERVER_ERROR',
+            roomId: bound?.roomId,
+            playerId: bound?.kind === 'player' ? bound.playerId : undefined,
+            payload: {
+              event,
+              error: error instanceof Error ? error.name : 'unknown',
+            },
+          });
           result = failure('INTERNAL_ERROR', 'Something went wrong');
         }
       }

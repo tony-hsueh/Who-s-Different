@@ -12,10 +12,16 @@ export function parsePublicBaseUrl(raw: string | undefined): string | null {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new Error(`PUBLIC_BASE_URL must be http or https: ${value}`);
   }
-  if (url.search || url.hash || url.username || url.password) {
+  if (
+    url.pathname !== '/' ||
+    url.search ||
+    url.hash ||
+    url.username ||
+    url.password
+  ) {
     throw new Error(
-      `PUBLIC_BASE_URL must not carry a query, hash or credentials: ${value}`,
+      `PUBLIC_BASE_URL must be an origin only, with no path, query, hash or credentials: ${value}`,
     );
   }
-  return `${url.origin}${url.pathname}`.replace(/\/+$/, '');
+  return url.origin;
 }

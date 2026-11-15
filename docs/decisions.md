@@ -122,7 +122,7 @@
 沿用總覽假設 1（不做主持人踢人，所以 Lobby 沒有移除玩家的按鈕）。票上沒寫清楚的地方，我這樣選。
 
 - **QR Code 的網址從哪來。** `PUBLIC_BASE_URL` 是 Server 的環境變數，前端讀不到，所以 Server 多一個 `GET /config`，回 `{ publicBaseUrl: string | null }`。Lobby 開啟時問一次；沒設、請求失敗或格式不對，就用主持人瀏覽器網址列的 `window.location.origin`。這樣區網測試時，只要用 `http://<電腦區網 IP>:3000` 開主持人頁，不設環境變數也掃得到。如果主持人用 `localhost` 開，手機掃到的就是 `localhost`，連不上，所以這種情況要設 `PUBLIC_BASE_URL`。`.env.example` 已補上這句說明。
-- **`PUBLIC_BASE_URL` 啟動時檢查。** `parsePublicBaseUrl` 只收 http 或 https，不能帶 query、hash 或帳密，結尾的斜線會去掉；填錯就讓 Server 啟動失敗，不要等到玩家掃了打不開才發現。可以帶路徑前綴（例如 `https://example.com/wd`）。
+- **`PUBLIC_BASE_URL` 啟動時檢查。** `parsePublicBaseUrl` 只收 http 或 https，只能是網站根網址（不能帶路徑、query、hash 或帳密），結尾的斜線會去掉；填錯就讓 Server 啟動失敗，不要等到玩家掃了打不開才發現。路徑前綴（例如 `https://example.com/wd`）不收，因為前端路由沒有設 basename，掃到會是 404。
 - **答案回來前不畫 QR Code。** 先畫猜的網址再換掉，投影上會閃一下，而且主持人可能剛好拿那個舊的去掃。
 - **QR Code 自己畫 SVG，不用 `qrcode` 的字串輸出。** 用 `QRCode.create` 取得格子矩陣，把每列連續的深色格合成一條路徑，一個 `<svg>`、一個 `<path>`，沒有 `innerHTML`，也不需要放寬 CSP。糾錯等級 M，留白 4 格。SVG 上有 `data-value` 記下編碼的文字，單元測試靠它檢查「編進去的就是這串網址」。測試沒有真的解碼圖片：編碼文字由 `buildJoinUrl` 組出來，再由元件原樣編碼，這兩段分別有測試。
 - **連結只有房間代碼。** `buildJoinUrl(baseUrl, roomCode)` 回 `${baseUrl}/room/${roomCode}`，沒有 query、沒有 hash，主持人 Token 與 `roomId` 都不在裡面，有測試。

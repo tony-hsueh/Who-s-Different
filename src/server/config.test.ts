@@ -16,9 +16,9 @@ describe('parsePublicBaseUrl', () => {
     );
   });
 
-  it('keeps a path prefix without the trailing slash', () => {
-    expect(parsePublicBaseUrl('https://example.com/wd/')).toBe(
-      'https://example.com/wd',
+  it('rejects a path prefix, which the app is not served under', () => {
+    expect(() => parsePublicBaseUrl('https://example.com/wd')).toThrow(
+      /PUBLIC_BASE_URL/,
     );
   });
 

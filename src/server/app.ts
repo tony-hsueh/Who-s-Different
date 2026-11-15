@@ -17,6 +17,10 @@ import { RoomStore } from './rooms/room-store.js';
 import { registerSocketHandlers } from './socket.js';
 
 export const DEFAULT_SWEEP_INTERVAL_MS = 60_000;
+// Socket.IO's defaults (25 s and 20 s) leave a phone on a dead link for up to 45 s. A link
+// that stops answering is dropped after at most interval + timeout.
+export const DEFAULT_PING_INTERVAL_MS = 10_000;
+export const DEFAULT_PING_TIMEOUT_MS = 10_000;
 
 export interface CreateAppOptions {
   clientDir?: string;
@@ -29,6 +33,8 @@ export interface CreateAppOptions {
   rateLimit?: RateLimitOptions;
   publicBaseUrl?: string | null;
   presenceDebounceMs?: number;
+  pingIntervalMs?: number;
+  pingTimeoutMs?: number;
 }
 
 export function createApp({
@@ -41,10 +47,15 @@ export function createApp({
   rateLimit = DEFAULT_RATE_LIMIT,
   publicBaseUrl = null,
   presenceDebounceMs = DEFAULT_PRESENCE_DEBOUNCE_MS,
+  pingIntervalMs = DEFAULT_PING_INTERVAL_MS,
+  pingTimeoutMs = DEFAULT_PING_TIMEOUT_MS,
 }: CreateAppOptions = {}) {
   const app = express();
   const httpServer = createServer(app);
-  const io: AppServer = new Server(httpServer);
+  const io: AppServer = new Server(httpServer, {
+    pingInterval: pingIntervalMs,
+    pingTimeout: pingTimeoutMs,
+  });
 
   app.use(contentSecurityPolicy);
 

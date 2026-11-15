@@ -3,7 +3,7 @@ import { ROLE_LABEL } from '../../lib/role-labels';
 import { useOnce } from '../../hooks/useOnce';
 import { useRequest } from '../../net/hooks';
 import { Avatar } from '../../ui/Avatar';
-import { Button } from '../../ui/Button';
+import { ServerButton } from '../../ui/ServerButton';
 import './HostFinished.css';
 
 export function HostFinished({ state }: { state: PublicRoomState }) {
@@ -72,9 +72,9 @@ export function HostFinished({ state }: { state: PublicRoomState }) {
           </ol>
         </section>
       </div>
-      <Button size="lg" disabled={again.busy} onClick={again.run}>
+      <ServerButton size="lg" disabled={again.busy} onClick={again.run}>
         再玩一場
-      </Button>
+      </ServerButton>
     </main>
   );
 }

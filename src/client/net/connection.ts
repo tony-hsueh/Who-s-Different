@@ -33,15 +33,21 @@ export interface ConnectionSnapshot {
 }
 
 export const REQUEST_TIMEOUT_MS = 10_000;
+// Matches the server's ping interval: a page hidden for less than one heartbeat cannot have
+// missed more than one ping, so its connection is still trusted when it comes back.
+export const STALE_AFTER_HIDDEN_MS = 10_000;
 
 interface Options {
   socket: SocketLike;
   onError: (code: ErrorCode) => void;
+  now?: () => number;
 }
 
 export class ConnectionStore {
   private readonly socket: SocketLike;
   private readonly onError: (code: ErrorCode) => void;
+  private readonly now: () => number;
+  private hiddenAt: number | null = null;
   private readonly listeners = new Set<() => void>();
   private identity: Identity | null = null;
   // Bumped whenever an in-flight auth answer stops being relevant.
@@ -52,9 +58,10 @@ export class ConnectionStore {
   private readonly pending = new Set<(ack: AckFailure) => void>();
   private snapshot: ConnectionSnapshot;
 
-  constructor({ socket, onError }: Options) {
+  constructor({ socket, onError, now = Date.now }: Options) {
     this.socket = socket;
     this.onError = onError;
+    this.now = now;
     this.snapshot = {
       connected: socket.connected,
       status: 'idle',
@@ -69,6 +76,8 @@ export class ConnectionStore {
     this.socket.on('room:state', this.handleRoomState);
     this.socket.on('game:player-state', this.handlePlayerState);
     this.socket.on('room:closed', this.handleRoomClosed);
+    window.addEventListener('online', this.handleOnline);
+    document.addEventListener('visibilitychange', this.handleVisibility);
     this.socket.connect();
   }
 
@@ -78,8 +87,20 @@ export class ConnectionStore {
     this.socket.off('room:state', this.handleRoomState);
     this.socket.off('game:player-state', this.handlePlayerState);
     this.socket.off('room:closed', this.handleRoomClosed);
+    window.removeEventListener('online', this.handleOnline);
+    document.removeEventListener('visibilitychange', this.handleVisibility);
+    this.hiddenAt = null;
     this.socket.disconnect();
   }
+
+  // Drops the current connection and opens a fresh one at once, skipping any backoff wait.
+  // The new connection authenticates again with the saved token (see `reauth`), so it is the
+  // same identity, not a second one.
+  reconnect = () => {
+    this.mayBeBound = false;
+    this.socket.disconnect();
+    this.socket.connect();
+  };
 
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -94,7 +115,7 @@ export class ConnectionStore {
     if (sameIdentity(this.identity, identity)) return;
     this.identity = identity;
     this.authRound++;
-    if (this.mayBeBound) this.rebind();
+    if (this.mayBeBound) this.reconnect();
     this.update({
       roomState: null,
       playerState: null,
@@ -220,11 +241,21 @@ export class ConnectionStore {
     this.reauth();
   };
 
-  private rebind() {
-    this.mayBeBound = false;
-    this.socket.disconnect();
-    this.socket.connect();
-  }
+  // The browser says the network is back. The old connection may be a silent leftover of
+  // the previous network, so it is replaced rather than trusted until the heartbeat fails.
+  private handleOnline = () => this.reconnect();
+
+  private handleVisibility = () => {
+    if (document.visibilityState === 'hidden') {
+      this.hiddenAt ??= this.now();
+      return;
+    }
+    const hiddenFor = this.hiddenAt === null ? 0 : this.now() - this.hiddenAt;
+    this.hiddenAt = null;
+    if (!this.socket.connected || hiddenFor > STALE_AFTER_HIDDEN_MS) {
+      this.reconnect();
+    }
+  };
 
   private handleDisconnect = () => {
     this.mayBeBound = false;

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { useRequest } from '../net/hooks';
 import { saveHostToken } from '../net/session-storage';
 import { Cover } from '../components/Cover';
-import { Button } from '../ui/Button';
+import { ServerButton } from '../ui/ServerButton';
 import { FullscreenMessage } from '../ui/FullscreenMessage';
 
 export function HomePage() {
@@ -28,9 +28,13 @@ export function HomePage() {
       title="誰跟我不一樣？"
       message="大家拿到的詞語幾乎一樣，找出那幾個拿到不同詞語的人。"
     >
-      <Button size="lg" disabled={creating} onClick={() => void createRoom()}>
+      <ServerButton
+        size="lg"
+        disabled={creating}
+        onClick={() => void createRoom()}
+      >
         建立房間
-      </Button>
+      </ServerButton>
     </FullscreenMessage>
   );
 }

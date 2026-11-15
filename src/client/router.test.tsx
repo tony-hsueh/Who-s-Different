@@ -39,6 +39,7 @@ const roomState = {
 describe('routes', () => {
   it('/ shows the home page with a create-room button', () => {
     renderAt('/');
+    act(() => socket.serverConnect());
     expect(
       screen.getByRole('heading', { level: 1, name: '誰跟我不一樣？' }),
     ).toBeDefined();
@@ -47,7 +48,7 @@ describe('routes', () => {
 
   it('creating a room saves the host token and opens the host page', async () => {
     const { router } = renderAt('/');
-    socket.serverConnect();
+    act(() => socket.serverConnect());
     fireEvent.click(screen.getByRole('button', { name: '建立房間' }));
     socket.answer('room:create', {
       ok: true,
@@ -133,8 +134,10 @@ describe('with localStorage disabled', () => {
       throw new DOMException('denied', 'SecurityError');
     });
     const home = renderAt('/');
+    act(() => socket.serverConnect());
     expect(screen.getByRole('button', { name: '建立房間' })).toBeDefined();
     home.unmount();
+    act(() => socket.serverDisconnect());
     const player = renderAt('/room/ABCD');
     act(() => socket.serverConnect());
     expect(screen.getByLabelText('暱稱')).toBeDefined();

@@ -51,3 +51,26 @@
 - **`rng` 由外部傳入。** 型別是 `() => number`，回傳 0 到 1 之間的數，正式環境傳 `Math.random`，測試傳固定種子的亂數。
 - **驗證比對前先去頭尾空白。** `'貓'` 和 `' 貓 '` 視為同一個詞，避免多打空白就騙過檢查。驗證會一次列出所有問題，啟動時題庫有錯，Server 直接停止。
 - **類別與難度。** PRD 範例沒有標類別與難度，由我標。`difficulty` 目前不使用，依票保留欄位。
+
+## PR-04 房間、玩家身分與狀態投影
+
+沿用總覽假設 4（Token 12 小時、房間閒置 2 小時清除）和假設 1（不做主持人踢人）。其他票上沒寫清楚的地方，我這樣選。
+
+- **錯誤碼是型別化的聯集。** `RoomErrorCode` 放在 `src/shared/room-types.ts`，前後端共用。房間自己的有 `NICKNAME_EMPTY`、`NICKNAME_TOO_LONG`、`NICKNAME_TAKEN`、`ROOM_FULL`、`ROOM_NOT_FOUND`、`ROOM_CODE_UNAVAILABLE`、`PLAYER_NOT_FOUND`、`GAME_IN_PROGRESS`、`NOT_ENOUGH_PLAYERS`、`INVALID_PHASE`、`INVALID_TOKEN`、`TOKEN_EXPIRED`，再加上 PR-02 的 `RuleErrorCode`。預期內的失敗都回 `{ ok: false, code, message }`，不丟例外。
+- **暱稱長度算 code point。** `[...name].length`，上限 12。一個 emoji 算 1 個字，中文一字算 1 個。代價是帶 ZWJ 的組合 emoji（例如家庭 emoji）和帶變體選擇符的字會算成多個字，所以這類暱稱比使用者看到的字數更早被擋。要改成字素（grapheme）只要換成 `Intl.Segmenter`。長度在去頭尾空白之後才算。
+- **暱稱比對是完全相同。** 去頭尾空白後逐字比，大小寫視為不同，不做 Unicode 正規化。票上寫「完全相同」，所以我不加額外規則。
+- **加入的檢查順序。** 房間不存在、已經開始、暱稱空白、暱稱太長、暱稱重複、房間已滿。
+- **房間代碼不分大小寫。** 字元集是 A-Z 與 2-9，去掉 0、O、1、I（共 32 個）。玩家輸入的代碼去空白後轉大寫再比對。產生時最多重抽 1000 次，仍撞號就回 `ROOM_CODE_UNAVAILABLE`，不會無限迴圈。
+- **只有 Lobby 能離開。** 票上寫「僅 Lobby 可離開」，所以 `finished` 階段也不能離開，要等 `resetGame` 回到 Lobby。
+- **頭像取最小的空位。** `avatarIndex` 從 0 開始，取目前沒人用的最小值，`avatarColor` 是 15 色色盤的同一格。沒人離開時就是加入順序。有人離開再加入，會補上空位，不會和在場的人重複。圖案編號對應哪個圖，留給前端。
+- **`Room` 不可變。** 每次更動都換一個新物件，呼叫端手上的舊物件不會被改。`Room` 含秘密狀態，只能經過投影函式送出去。
+- **`applyRule` 是 PR-05 用的入口。** 票上沒列，但房間需要一個地方套用 PR-02 的 `eliminate`、`skipRound`、`nextRound`，否則玩到一半的狀態沒辦法進來。它只是把規則函式的結果存回房間，失敗就原樣回傳錯誤碼，房間不變。
+- **`startGame` 的亂數與題目。** 抽題與分配陣營共用同一個注入的 `rng`。抽到的題目 id 加進 `recentQuestionIds`，`resetGame` 保留這份記錄，所以再玩一場不會連續同一題。
+- **活動時間。** 建立、加入、離開、開始、重置、`applyRule` 都會更新 `lastActivityAt`。PR-06 做在線狀態時，要不要把連線也算活動，由 PR-06 決定。
+- **`sweepExpired`。** `SessionRegistry.sweepExpired(now)` 清過期 Token。`RoomStore.sweepExpired(now)` 先清閒置房間（連同它們的 Token），再清過期 Token，回傳被清掉的房間 id，PR-05 可以用來關連線。定時器由 PR-05 啟動。
+- **Token 只存 SHA-256 雜湊。** 玩家與主持人 Token 放在不同的表，所以互相不能冒用。比對時用雜湊當 key 查表，再用 `timingSafeEqual` 比一次。過期但還沒被清掉的 Token 回 `TOKEN_EXPIRED`，清掉之後回 `INVALID_TOKEN`。
+- **公開狀態只多帶 `playerId`。** `PublicPlayer` 除了暱稱、頭像、存活、在線，還有 `playerId`，主持人點人淘汰要靠它。`playerId` 不是秘密，Session Token 才是。
+- **最近一次揭曉結果。** `lastElimination` 取最後一筆淘汰紀錄。最後一筆是「本輪無人淘汰」時不帶，所以跳過一輪後畫面不會顯示上一輪的人。被淘汰者的陣營依票上規定公開，存活者的陣營在 `finished` 之前不出現。
+- **私有狀態。** `PlayerPrivateState` 有 `playerId`、`phase`、`roundNumber`、`secretWord`、`eliminated`，沒有 `role`。Lobby 時 `secretWord` 是 `null`。玩家不在房間時 `toPlayerPrivateState` 回 `undefined`，呼叫端用 Token 驗證過身分，正常不會遇到。
+- **`online` 預設 `false`。** 更新邏輯留給 PR-06。
+- **測試輔助檔。** `src/server/rooms/test-helpers.ts` 不是測試檔，所以在 `tsconfig.server.json` 排除，不會被編進 `dist`。

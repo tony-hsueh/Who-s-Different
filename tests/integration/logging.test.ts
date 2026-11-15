@@ -84,6 +84,7 @@ describe('event log over a full game', () => {
       ['PLAYER_ELIMINATED', 1],
       ['ROUND_STARTED', 2],
       ['ROUND_SKIPPED', 2],
+      ['ROUND_STARTED', 3],
       ['ELIMINATION_CONFIRMED', 3],
       ['PLAYER_ELIMINATED', 3],
       ['ROUND_STARTED', 4],
@@ -198,6 +199,8 @@ describe('event log over a full game', () => {
     expect(rejected).toHaveLength(1);
     expect(rejected[0]).toMatchObject({
       room_id: lobby.roomId,
+      game_id: gameOf(server, lobby.roomId).gameId,
+      round_number: 1,
       player_id: player.playerId,
     });
     expect(JSON.parse(rejected[0]!.payload)).toEqual({

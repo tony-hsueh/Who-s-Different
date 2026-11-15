@@ -146,6 +146,7 @@ export function registerGameHandlers(env: HandlerEnv): void {
       roundNumber,
       payload: {},
     });
+    log({ type: 'ROUND_STARTED', ...gameFields(result.room), payload: {} });
     return ok;
   });
 

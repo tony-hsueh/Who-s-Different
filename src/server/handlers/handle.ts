@@ -40,6 +40,22 @@ export function logSafely(logger: EventLogger, event: LogEvent): void {
   }
 }
 
+// Who sent the request and which game it belongs to, so failures show up in
+// the per-game log.
+function caller(
+  env: HandlerEnv,
+): Pick<LogEvent, 'roomId' | 'gameId' | 'roundNumber' | 'playerId'> {
+  const binding = env.socket.data.binding;
+  if (!binding) return {};
+  const game = env.store.getRoom(binding.roomId)?.game;
+  return {
+    roomId: binding.roomId,
+    gameId: game?.gameId,
+    roundNumber: game?.roundNumber,
+    playerId: binding.kind === 'player' ? binding.playerId : undefined,
+  };
+}
+
 export function recordPrivate(
   logger: EventLogger,
   record: PrivateGameRecord,
@@ -87,11 +103,9 @@ export function handle<E extends keyof Requests>(
           result = run(parsed.data, env.socket.data.binding);
         } catch (error) {
           console.error(`handler for ${event} failed`, error);
-          const bound = env.socket.data.binding;
           logSafely(env.logger, {
             type: 'SERVER_ERROR',
-            roomId: bound?.roomId,
-            playerId: bound?.kind === 'player' ? bound.playerId : undefined,
+            ...caller(env),
             payload: {
               event,
               error: error instanceof Error ? error.name : 'unknown',
@@ -103,11 +117,9 @@ export function handle<E extends keyof Requests>(
     }
 
     if (!result.ok) {
-      const binding = env.socket.data.binding;
       logSafely(env.logger, {
         type: 'OPERATION_REJECTED',
-        roomId: binding?.roomId,
-        playerId: binding?.kind === 'player' ? binding.playerId : undefined,
+        ...caller(env),
         payload: { event, code: result.code },
       });
     }

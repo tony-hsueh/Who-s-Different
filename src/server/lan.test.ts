@@ -4,7 +4,11 @@ import { lanEnv, listLanCandidates, pickLanAddress } from './lan.js';
 
 function nic(
   address: string,
-  patch: Partial<NetworkInterfaceInfo> = {},
+  patch: {
+    family?: string | number;
+    internal?: boolean;
+    cidr?: string | null;
+  } = {},
 ): NetworkInterfaceInfo {
   return {
     address,
@@ -14,7 +18,7 @@ function nic(
     internal: false,
     cidr: `${address}/24`,
     ...patch,
-  };
+  } as NetworkInterfaceInfo;
 }
 
 describe('listLanCandidates', () => {
@@ -31,7 +35,7 @@ describe('listLanCandidates', () => {
   });
 
   it('accepts the numeric family older Node versions report', () => {
-    const numeric = nic('192.168.1.5', { family: 4 as unknown as 'IPv4' });
+    const numeric = nic('192.168.1.5', { family: 4 });
     expect(listLanCandidates({ eth0: [numeric] })).toHaveLength(1);
   });
 

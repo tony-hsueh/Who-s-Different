@@ -1,5 +1,6 @@
 import type {
   Ack,
+  AckFailure,
   ErrorCode,
   PlayerPrivateState,
   PublicRoomState,
@@ -48,6 +49,7 @@ export class ConnectionStore {
   // The server binds a socket to one identity for its lifetime, so once an auth may
   // have gone out, switching identity needs a fresh connection.
   private mayBeBound = false;
+  private readonly pending = new Set<(ack: AckFailure) => void>();
   private snapshot: ConnectionSnapshot;
 
   constructor({ socket, onError }: Options) {
@@ -135,26 +137,31 @@ export class ConnectionStore {
     return new Promise((resolve) => {
       // Socket.IO would buffer this and send it before the reconnect handler can authenticate.
       if (!this.socket.connected) {
-        resolve({
-          ok: false,
-          code: 'INTERNAL_ERROR',
-          message: 'not connected',
-        });
+        resolve(failure('not connected'));
         return;
       }
-      const timer = setTimeout(() => {
-        resolve({
-          ok: false,
-          code: 'INTERNAL_ERROR',
-          message: 'request timed out',
-        });
-      }, REQUEST_TIMEOUT_MS);
-      this.socket.emit(event, payload, (ack) => {
+      const identity = this.identity;
+      const settle = (ack: Ack<Requests[E]['data']>) => {
         clearTimeout(timer);
-        if (!ack.ok && ack.code === 'ROOM_NOT_FOUND' && this.identity) {
-          this.markInvalid(this.identity);
+        this.pending.delete(settle);
+        resolve(ack);
+      };
+      const timer = setTimeout(
+        () => settle(failure('request timed out')),
+        REQUEST_TIMEOUT_MS,
+      );
+      this.pending.add(settle);
+      this.socket.emit(event, payload, (ack) => {
+        // The answer may belong to a room the page has already left.
+        if (
+          !ack.ok &&
+          ack.code === 'ROOM_NOT_FOUND' &&
+          identity &&
+          sameIdentity(identity, this.identity)
+        ) {
+          this.markInvalid(identity);
         }
-        resolve(ack as Ack<Requests[E]['data']>);
+        settle(ack as Ack<Requests[E]['data']>);
       });
     });
   }
@@ -216,6 +223,10 @@ export class ConnectionStore {
 
   private handleDisconnect = () => {
     this.mayBeBound = false;
+    // Requests still in flight, or held in Socket.IO's buffer while its heartbeat had expired,
+    // must not be replayed on the next connection before it authenticates.
+    this.socket.sendBuffer.length = 0;
+    for (const settle of [...this.pending]) settle(failure('disconnected'));
     const waiting =
       this.snapshot.status === 'ready' ||
       this.snapshot.status === 'authenticating';
@@ -247,6 +258,10 @@ export class ConnectionStore {
     this.snapshot = { ...this.snapshot, ...patch };
     for (const listener of [...this.listeners]) listener();
   }
+}
+
+function failure(message: string): AckFailure {
+  return { ok: false, code: 'INTERNAL_ERROR', message };
 }
 
 function sameIdentity(a: Identity | null, b: Identity | null) {

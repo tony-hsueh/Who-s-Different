@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Button } from './Button';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -106,6 +107,38 @@ describe('ConfirmDialog', () => {
     );
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(onCancel).toHaveBeenCalledOnce();
+  });
+});
+
+describe('ConfirmDialog focus', () => {
+  it('keeps Tab inside the dialog and returns focus to the opener', () => {
+    function Host() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button onClick={() => setOpen(true)}>open</button>
+          <ConfirmDialog
+            open={open}
+            title="t"
+            onConfirm={() => setOpen(false)}
+            onCancel={() => setOpen(false)}
+          />
+        </>
+      );
+    }
+    render(<Host />);
+    const opener = screen.getByRole('button', { name: 'open' });
+    opener.focus();
+    fireEvent.click(opener);
+    const cancel = screen.getByRole('button', { name: '取消' });
+    const confirm = screen.getByRole('button', { name: '確定' });
+    expect(document.activeElement).toBe(cancel);
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(confirm);
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(cancel);
+    fireEvent.click(cancel);
+    expect(document.activeElement).toBe(opener);
   });
 });
 

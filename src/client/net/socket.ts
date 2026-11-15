@@ -4,6 +4,8 @@ import type { Ack } from '../../shared';
 // The slice of a Socket.IO client that the connection layer uses. Tests swap in a fake.
 export interface SocketLike {
   readonly connected: boolean;
+  // Packets Socket.IO holds back while it believes the link is down; it sends them before 'connect' fires.
+  readonly sendBuffer: unknown[];
   on(event: string, listener: (...args: never[]) => void): unknown;
   off(event: string, listener: (...args: never[]) => void): unknown;
   emit(

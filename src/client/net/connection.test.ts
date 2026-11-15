@@ -276,6 +276,28 @@ describe('request', () => {
     expect(socket.requestsFor('game:start')[0]?.payload).toStrictEqual({});
   });
 
+  it('settles in-flight requests and drops buffered packets when the link drops', async () => {
+    const promise = store.request('game:start', {});
+    socket.sendBuffer.push({ held: 'by socket.io' });
+    socket.serverDisconnect();
+    expect(await promise).toMatchObject({ ok: false, code: 'INTERNAL_ERROR' });
+    expect(socket.sendBuffer).toHaveLength(0);
+  });
+
+  it('ignores ROOM_NOT_FOUND that answers after the page moved to another room', async () => {
+    savePlayerToken('WXYZ', 'other-token');
+    store.setIdentity({ kind: 'player', roomCode: 'ABCD' });
+    const promise = store.request('room:join', {
+      roomCode: 'ABCD',
+      nickname: 'x',
+    });
+    store.setIdentity({ kind: 'player', roomCode: 'WXYZ' });
+    socket.answer('room:join', fail('ROOM_NOT_FOUND'));
+    await promise;
+    expect(store.getSnapshot().status).not.toBe('invalid');
+    expect(readPlayerToken('WXYZ')).toBe('other-token');
+  });
+
   it('treats ROOM_NOT_FOUND from any request as a closed room', async () => {
     savePlayerToken('ABCD', 'player-token');
     store.setIdentity({ kind: 'player', roomCode: 'ABCD' });

@@ -201,6 +201,20 @@ describe('HostPlaying screen', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(6);
   });
 
+  it('keeps a newer dialog open when an older request settles', async () => {
+    await openPlaying(state());
+    fireEvent.click(avatarButton(3));
+    fireEvent.click(confirmButton());
+    fireEvent.click(screen.getByRole('button', { name: '取消' }));
+    fireEvent.click(avatarButton(4));
+    await act(async () =>
+      socket.answer('game:eliminate', { ok: true, data: null }),
+    );
+    expect(
+      screen.getByRole('heading', { name: '確定要淘汰玩家 玩家4 嗎？' }),
+    ).toBeDefined();
+  });
+
   it('can eliminate again after a rejection', async () => {
     await openPlaying(state());
     fireEvent.click(avatarButton(3));

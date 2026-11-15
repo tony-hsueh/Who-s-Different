@@ -43,7 +43,8 @@ export function HostPlaying({ state }: { state: PublicRoomState }) {
     inFlight.current = false;
     setBusy(false);
     // Accepted or rejected, the screen follows the next room:state, not this dialog.
-    setPending(null);
+    // A dialog opened meanwhile is a newer choice and stays.
+    setPending((now) => (now === pending ? null : now));
   }
 
   return (

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import type { LogEvent } from '../../src/server/log/noop-logger.js';
 import type { PublicRoomState } from '../../src/shared/room-types.js';
 import {
   aliveOf,
@@ -328,5 +329,33 @@ describe('server restart', () => {
     expect(
       await client.call('player:auth', { sessionToken: 'nope' }),
     ).toMatchObject({ ok: false, code: 'INVALID_TOKEN' });
+  });
+});
+
+describe('presence log events', () => {
+  it('logs disconnects and reconnects once per debounced change, with no token', async () => {
+    const events: LogEvent[] = [];
+    server = await startServer({
+      presenceDebounceMs: DEBOUNCE_MS,
+      logger: { logEvent: (e) => void events.push(e) },
+    });
+    const { host, hostToken, players } = await startedGame(server, 4);
+    const away = players[0];
+    if (!away) throw new Error('no player');
+    const types = () => events.map((e) => e.type);
+
+    away.client.socket.disconnect();
+    await expect.poll(types).toContain('PLAYER_DISCONNECTED');
+    await reconnect(away.token);
+    host.socket.disconnect();
+    await expect.poll(types).toContain('HOST_DISCONNECTED');
+    const back = await server.client();
+    must(await back.call('host:auth', { hostToken }));
+
+    expect(types().filter((t) => t === 'PLAYER_DISCONNECTED')).toHaveLength(1);
+    expect(types().filter((t) => t === 'PLAYER_RECONNECTED')).toHaveLength(1);
+    expect(types().filter((t) => t === 'HOST_RECONNECTED')).toHaveLength(1);
+    expect(JSON.stringify(events)).not.toContain(away.token);
+    expect(JSON.stringify(events)).not.toContain(hostToken);
   });
 });

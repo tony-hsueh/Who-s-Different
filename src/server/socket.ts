@@ -3,6 +3,7 @@ import { registerRoomHandlers } from './handlers/room.js';
 import type { AppServer } from './broadcast.js';
 import type { EventLogger } from './log/noop-logger.js';
 import { RateLimiter, type RateLimitOptions } from './rate-limit.js';
+import type { PresenceService } from './presence-sync.js';
 import type { RoomStore } from './rooms/room-store.js';
 
 export type SocketDeps = {
@@ -11,6 +12,7 @@ export type SocketDeps = {
   logger: EventLogger;
   now: () => number;
   rateLimit: RateLimitOptions;
+  presence: PresenceService;
 };
 
 export function registerSocketHandlers({
@@ -19,6 +21,7 @@ export function registerSocketHandlers({
   logger,
   now,
   rateLimit,
+  presence,
 }: SocketDeps): void {
   io.on('connection', (socket) => {
     const env = {
@@ -26,9 +29,13 @@ export function registerSocketHandlers({
       socket,
       store,
       logger,
+      presence,
       limiter: new RateLimiter(rateLimit, now),
     };
     registerRoomHandlers(env);
     registerGameHandlers(env);
+    socket.on('disconnect', () => {
+      presence.disconnect(socket);
+    });
   });
 }

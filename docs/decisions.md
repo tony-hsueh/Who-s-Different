@@ -111,3 +111,23 @@
 - **Server 重啟後回 `ROOM_NOT_FOUND`。** 重啟後 Token 表是空的，只看雜湊分不出「Token 是假的」還是「房間已經不在」。我讓 Token 以房間 id 開頭（`{roomId}.{32 位元組隨機}`）。Token 查不到，而開頭的房間 id 也不存在時回 `ROOM_NOT_FOUND`；房間還在但密碼不對，或是格式不符，仍回 `INVALID_TOKEN`。房間 id 本來就出現在公開狀態裡，不是秘密，所以這個前綴沒有洩漏新資訊；Token 的隨機部分不變，仍然只存雜湊。房間被清除過期後，舊 Token 也改成回 `ROOM_NOT_FOUND`。
 - **Log。** 新增 `PLAYER_DISCONNECTED`、`PLAYER_RECONNECTED`、`HOST_DISCONNECTED`、`HOST_RECONNECTED` 四種事件，只在 debounce 後真的有變化時寫，`payload` 是空的。`EventLogger` 介面不動。「重連」指之前記過斷線的身分再次上線，第一次驗證不算。
 - **Lobby 中離線的玩家照樣保留。** 沿用假設 1，不做主持人移除，離線不會自動踢出。
+
+## PR-07 Event Log 與 SQLite 持久化
+
+沿用總覽假設 5（CLI 加一個要管理 Token 的 HTTP 端點，不做後台頁面）。票上沒寫清楚的地方，我這樣選。
+
+- **`better-sqlite3` 釘在 12.9.0（精確版本）。** 12.10 以後不再發 Node 20 的預編譯檔，CI 是 Node 20.19，會退回用原始碼編譯，需要編譯工具鏈。12.9.0 有 `node-v115-linux-x64`（Node 20）也有 Node 24 的 Windows 預編譯檔。`node:sqlite` 在 Node 20 沒有，所以不能用。要升級時先確認新版仍有 Node 20 的預編譯檔，或把 `engines` 與 CI 升到 Node 22。
+- **Logger 介面只加一個選用方法。** `logEvent` 不變。多了選用的 `recordPrivateGame(record)`，專門寫 `game_private_records`。詞語與陣營分配不放進 `LogEvent`，所以 PR-05 的測試（直接檢查 `LogEvent` 裡沒有詞語）照樣成立，PR-06 的假 logger 也不用改。選用方法由 `recordPrivate()` 包住，丟例外只印到 stderr。
+- **`games` 表由事件推出來。** `GAME_STARTED` 的 payload 帶 `playerCount`、`minorityCount`，寫入時新增一列；`GAME_FINISHED` 補上 `finished_at`、`winner`、`rounds`。呼叫端不用另外維護 metadata。
+- **新增的事件。** `WORDS_ASSIGNED`、`ELIMINATION_CONFIRMED`、`WIN_CONDITION_MET`、`SERVER_ERROR`。`PLAYER_DISCONNECTED`、`PLAYER_RECONNECTED` 留給 PR-06 加進型別，因為它們的呼叫端在 PR-06，兩邊各加會互相衝突。資料庫不限制事件名稱，所以 PR-06 合併後不用改 schema。
+- **一局的事件順序。** 開始時依序是 `GAME_STARTED`、`WORDS_ASSIGNED`、`ROUND_STARTED`（第 1 輪）。淘汰時依序是 `ELIMINATION_CONFIRMED`、`PLAYER_ELIMINATED`，達成勝負再加 `WIN_CONDITION_MET`、`GAME_FINISHED`。跳過一輪時依序是 `ROUND_SKIPPED`（舊的一輪）、`ROUND_STARTED`（新的一輪），所以每一輪都有開始事件。`GAME_RESET` 帶上剛結束那場的 Game ID 與最後一輪，查那一場時才看得到。
+- **淘汰 payload。** `gameId`、`round`、`eliminatedPlayerId`、`role`（被淘汰者，依規定公開）、`remaining`（淘汰後雙方存活人數）、`winReached`，達成勝負時多一個 `winner`。這是 Log，不是對外資料，所以可以有人數。
+- **`WORDS_ASSIGNED` 只記題目 id 與人數。** 詞語、陣營分配寫在 `game_private_records`。`redact()` 會在寫入前移除 `sessionToken`、`hostToken`、`secretWord`、`majorityWord`、`minorityWord`、`assignments`，任何深度都處理。`game_private_records` 在遊戲一開始就寫，因為票上要求「題目與陣營分配」可查，這張表只能用本機 CLI 讀，HTTP 端點不回傳。
+- **寫入同步、單一交易。** 每筆事件的寫入（含 `games` 更新）包在一個交易裡。排序用 `timestamp` 再用 `rowid`，同一毫秒的事件仍照寫入順序。`event_id` 用 `randomUUID()`。
+- **`SERVER_ERROR`。** Handler 丟例外時記一筆（`OPERATION_REJECTED` 也一樣，會帶上綁定身分所在房間目前的 Game ID 與輪數，查單場時看得到），只放事件名與錯誤類型（`error.name`），不放訊息，避免訊息夾帶資料。對 client 仍回 `INTERNAL_ERROR`，同時照舊記一筆 `OPERATION_REJECTED`。
+- **`schema.sql` 用 `CREATE ... IF NOT EXISTS`。** 每次啟動都會執行，所以重啟不會出錯。`tsc` 不會複製 `.sql`，`npm run build` 最後多一步把它複製到 `dist/server/server/log/`。
+- **路徑與啟動。** `LOG_DB_PATH` 預設 `./data/events.db`（已加進 `.gitignore`），資料夾不存在會自動建立。`ADMIN_TOKEN` 沒設就不給 `createApp` 任何 `admin` 選項。
+- **Admin 端點。** `GET /admin/games/:gameId/events`。`/admin` 一律掛在靜態檔與 SPA fallback 前面，沒設 Token 時所有 `/admin/*` 回 404，不會被 SPA fallback 回成 200。Token 先各自做 SHA-256 再用 `timingSafeEqual` 比，長度不同也是固定時間。缺少或錯誤回 401。查不到事件的 Game ID 回 404。回傳 `{ events: [...] }`，payload 已解析成物件。
+- **CLI。** `npm run logs -- --game <id>`、`--room <id>`、`--private`（可再加 `--game <id>` 只看一場）。`npm run logs:cleanup` 等於 `--cleanup`。路徑同樣讀 `LOG_DB_PATH`。`scripts/` 加進 `tsconfig.node.json` 與 ESLint 的 Node 範圍。
+- **清理。** 刪除 30 天以前（嚴格早於 `now - 30 天`）的事件、私有紀錄，以及開始時間在 30 天以前的 `games` 列。Server 啟動時先跑一次，之後每 24 小時一次，計時器 `unref()`。時鐘可注入，測試用假時鐘與假計時器。清理失敗只印到 stderr，不影響服務。
+- **Server 重啟。** 事件只進 SQLite 檔，測試把資料庫關掉再開同一個檔，確認仍查得到。遊戲狀態本身仍只在記憶體，重啟後房間照舊失效。

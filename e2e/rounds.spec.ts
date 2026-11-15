@@ -1,15 +1,17 @@
+import { devices, type Browser, type Page } from '@playwright/test';
 import {
-  devices,
+  eliminate,
   expect,
+  readSecretWord,
+  round,
+  startedGame,
   test,
-  type Browser,
-  type Page,
-} from '@playwright/test';
+} from './helpers/index.js';
 import { io, type Socket } from 'socket.io-client';
 import type { PlayerPrivateState } from '../src/shared/index.js';
 
-// The host runs through the real host UI. Other players are node socket clients, plus one
-// real phone page where the player reveal is checked.
+// The full-game walkthrough drives the host UI with node socket bots plus one real phone;
+// the scenario specs for rounds and wins use only real phones.
 interface Bot {
   nickname: string;
   playerId: string;
@@ -87,17 +89,6 @@ async function phoneSeat(phone: Page, baseURL: string, roomCode: string) {
     playerId: auth.data.privateState.playerId as string,
     word: auth.data.privateState.secretWord as string,
   };
-}
-
-const avatar = (page: Page, nickname: string) =>
-  page.getByRole('listitem').filter({ hasText: nickname }).getByRole('button');
-
-async function eliminate(page: Page, nickname: string) {
-  await avatar(page, nickname).click();
-  await page
-    .getByRole('dialog')
-    .getByRole('button', { name: '確認淘汰' })
-    .click();
 }
 
 const lastWord = (bot: Bot) => bot.privates.at(-1)?.secretWord ?? '';
@@ -297,4 +288,101 @@ test('reduced motion swaps the shake and confetti for a fade', async ({
   expect(animation).toStrictEqual(['host-reveal-fade', '0.6s']);
   const confetti = page.locator('.host-reveal__confetti');
   if (await confetti.count()) await expect(confetti).toBeHidden();
+});
+
+// Scenarios 13 and 14 plus the skipped round, all with real phones.
+test('scenario 13: the game is not over, so the host moves on to the next round', async ({
+  browser,
+}) => {
+  const game = await startedGame(browser, 7);
+  const { page } = game.host;
+  const out = game.majority[0]!;
+  const stays = game.seats.find((s) => s !== out)!;
+
+  await eliminate(page, out.nickname);
+  await expect(page.locator('.host-reveal')).toBeVisible();
+  await expect(stays.page.getByText(/被淘汰了/)).toBeVisible();
+
+  await page.getByRole('button', { name: '下一輪' }).click();
+  await expect(round(page, 2)).toBeVisible();
+  for (const seat of game.seats) {
+    await expect(seat.page.getByText('第 2 輪')).toBeVisible();
+    await expect(seat.page.getByText(/被淘汰了/)).toHaveCount(0);
+  }
+  await expect(out.page.getByText('你已淘汰，可以繼續觀戰')).toBeVisible();
+  expect(
+    await readSecretWord(stays.page),
+    'words stay for the whole game',
+  ).toBe(stays.word);
+});
+
+test('a skipped round goes straight to the next one with nobody out', async ({
+  browser,
+}) => {
+  const game = await startedGame(browser, 4);
+  const { page } = game.host;
+
+  await page.getByRole('button', { name: '本輪無人淘汰' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '確認' }).click();
+  await expect(round(page, 2)).toBeVisible();
+  await expect(page.locator('.host-reveal')).toHaveCount(0);
+  await expect(page.getByText('已淘汰')).toHaveCount(0);
+  for (const seat of game.seats) {
+    await expect(seat.page.getByText('第 2 輪')).toBeVisible();
+    await expect(seat.page.getByText('存活')).toBeVisible();
+  }
+});
+
+test('scenario 14: catching the last minority player ends the game for the majority', async ({
+  browser,
+}) => {
+  const game = await startedGame(browser, 4);
+  const { page } = game.host;
+  const catchMe = game.minority[0]!;
+
+  await eliminate(page, catchMe.nickname);
+  await expect(page.locator('.host-reveal')).toHaveAttribute(
+    'data-outcome',
+    'caught',
+  );
+  await page.getByRole('button', { name: '看結果' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '平民獲勝！' }),
+  ).toBeVisible();
+  const finished = page.locator('.host-finished');
+  await expect(
+    finished.getByText(game.majorityWord, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    finished.getByText(game.minorityWord, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator('.host-finished__roster li[data-role="minority"]'),
+  ).toContainText(catchMe.nickname);
+  for (const seat of game.seats) {
+    await expect(seat.page.getByText('請看大螢幕')).toBeVisible();
+  }
+});
+
+test('scenario 14: the minority wins once it is as large as the majority', async ({
+  browser,
+}) => {
+  const game = await startedGame(browser, 4);
+  const { page } = game.host;
+
+  await eliminate(page, game.majority[0]!.nickname);
+  await page.getByRole('button', { name: '下一輪' }).click();
+  await expect(round(page, 2)).toBeVisible();
+  await eliminate(page, game.majority[1]!.nickname);
+  await expect(page.locator('.host-reveal')).toHaveAttribute(
+    'data-outcome',
+    'wrong',
+  );
+  await page.getByRole('button', { name: '看結果' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '臥底獲勝！' }),
+  ).toBeVisible();
+  for (const seat of game.seats) {
+    await expect(seat.page.getByText('請看大螢幕')).toBeVisible();
+  }
 });

@@ -219,3 +219,16 @@
 - **CLI。** `npm run logs -- --game <id>`、`--room <id>`、`--private`（可再加 `--game <id>` 只看一場）。`npm run logs:cleanup` 等於 `--cleanup`。路徑同樣讀 `LOG_DB_PATH`。`scripts/` 加進 `tsconfig.node.json` 與 ESLint 的 Node 範圍。
 - **清理。** 刪除 30 天以前（嚴格早於 `now - 30 天`）的事件、私有紀錄，以及開始時間在 30 天以前的 `games` 列。Server 啟動時先跑一次，之後每 24 小時一次，計時器 `unref()`。時鐘可注入，測試用假時鐘與假計時器。清理失敗只印到 stderr，不影響服務。
 - **Server 重啟。** 事件只進 SQLite 檔，測試把資料庫關掉再開同一個檔，確認仍查得到。遊戲狀態本身仍只在記憶體，重啟後房間照舊失效。
+
+## PR-14 多人 Playwright E2E 測試
+
+票上沒寫清楚的地方，我這樣選。
+
+- **所有測試共用一個 Server，用獨立房間隔離。** 票上寫「獨立 Server（或獨立房間）」。每個測試自己建房間，房間代碼是隨機的，互不干擾。`playwright.config.ts` 啟動一個 Server，帶 `ADMIN_TOKEN`、暫存的 `LOG_DB_PATH`（`E2E_LOG_DB`，沒設就由設定檔在暫存資料夾建一個）和 `PUBLIC_BASE_URL`。CI 把 `E2E_LOG_DB` 指到工作目錄，失敗時一起上傳。
+- **測試怎麼知道 Game ID。** 主持人網址有 `roomId`，所以管理端點多一個 `GET /admin/rooms/:roomId/events`（同一個 Bearer Token，沒有事件回 404）。測試用它查出房間跑過的 Game ID，再用 `fetchEvents(gameId)` 查單場。沒有後門：這個端點只讀 Event Log，且 Log 本身已不含詞語與 Token。
+- **真人畫面取代 node socket。** 21 個情境都用主持人（1920×1080）加手機（iPhone 13）真實瀏覽器 context。`findMinority` 只看玩家讀到的詞，人數較少的那組詞就是少數。舊 spec 裡用 node socket 當陪襯的測試保留，只負責版面與細節（Lobby QR、15 人版面、舊的玩家卡片細節），這些測試不依賴「別人看到什麼」。
+- **情境 19 的 Server 端檢查。** 畫面上已淘汰頭像是停用的，另外用主持人自己的 Token 開一條 socket 重送淘汰，確認 Server 回 `ALREADY_ELIMINATED`。Token 來自主持人頁的 localStorage，玩家 ID 來自主持人收到的公開狀態。
+- **檔案對應。** `host-lobby` 改名 `lobby`，`host-eliminate` 併入 `eliminate`，`reveal-finish` 併入 `rounds`，原有測試都留著。新增 `start`、`join`、`secrecy`、`reconnect`、`reset`、`event-log`。
+- **失敗產物。** 手動建立的 context 不吃設定檔的 `use`，所以 helper 自己補 `baseURL`。測試失敗時，每個開著的頁面截圖、每個房間的 Event Log 都附在報告裡。Trace 用 `trace: 'on-first-retry'`，CI 設 `retries: 1`、`workers: 2`、單測 timeout 60 秒；Playwright 會自動追蹤手動建立的 context，所以不另外開 trace。本機不重試、不錄 trace。
+- **斷網後恢復可能要久一點。** `setOffline(false)` 之後手機重連，最快不到 1 秒，曾經看過一次超過 30 秒沒恢復（Socket.IO 連線逾時 20 秒加退避）。情境 17 等恢復的上限放 40 秒，仍在 60 秒內。這是現有行為，不是這票改的。
+- **手機結束畫面的字不當斷言。** PR-13 會改手機結束畫面的陣營用字，所以手機端只檢查「請看大螢幕」，陣營與勝負用字以主持人結束畫面為準。

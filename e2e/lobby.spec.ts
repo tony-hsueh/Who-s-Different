@@ -1,8 +1,9 @@
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
 import { io, type Socket } from 'socket.io-client';
+import { expect, test } from './helpers/index.js';
 
-// The player join form arrives with PR-10, so players join over a plain socket here.
-// PR-14 replaces this with real player browsers.
+// Layout and QR checks only need bodies in the room, so the players here are node socket clients.
+// The scenarios that depend on what players do and see run real phones (start, join, secrecy, …).
 const sockets: Socket[] = [];
 
 test.afterEach(() => {

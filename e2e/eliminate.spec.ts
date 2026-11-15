@@ -1,12 +1,24 @@
-import { expect, test, type Page } from '@playwright/test';
+import { type Page } from '@playwright/test';
 import { io, type Socket } from 'socket.io-client';
+import {
+  avatar,
+  dialog,
+  eliminate,
+  expect,
+  packetJson,
+  playerIdOf,
+  roleKeyPaths,
+  round,
+  startedGame,
+  test,
+} from './helpers/index.js';
 import type {
   PlayerPrivateState,
   PublicRoomState,
 } from '../src/shared/index.js';
 
-// The player join form arrives with PR-10, so players join over a plain socket here.
-// PR-14 replaces this with real player browsers.
+// Layout and QR checks only need bodies in the room, so the players here are node socket clients.
+// The scenarios that depend on what players do and see run real phones (start, join, secrecy, …).
 interface Phone {
   nickname: string;
   playerId: string;
@@ -104,31 +116,6 @@ async function startGame(page: Page, baseURL: string, count: number) {
 }
 
 const last = <T>(items: T[]) => items.at(-1)!;
-const avatar = (page: Page, nickname: string) =>
-  page.getByRole('listitem').filter({ hasText: nickname }).getByRole('button');
-const dialog = (page: Page) => page.getByRole('dialog');
-
-function roleKeyPaths(value: unknown, path = ''): string[] {
-  if (Array.isArray(value))
-    return value.flatMap((v, i) => roleKeyPaths(v, `${path}[${i}]`));
-  if (value && typeof value === 'object')
-    return Object.entries(value).flatMap(([k, v]) => [
-      ...(k === 'role' ? [`${path}.${k}`] : []),
-      ...roleKeyPaths(v, `${path}.${k}`),
-    ]);
-  return [];
-}
-
-// Socket.IO packets look like `42["event",{...}]` or `431[{...}]`; the JSON starts at the first bracket.
-function packetJson(text: string): unknown {
-  const start = text.search(/[[{]/);
-  if (start < 0) return undefined;
-  try {
-    return JSON.parse(text.slice(start));
-  } catch {
-    return undefined;
-  }
-}
 
 test('clicking an avatar asks first; cancel and Esc change nothing', async ({
   page,
@@ -348,4 +335,121 @@ test('15 players fit on 1920x1080 without scrolling', async ({
     await page.screenshot({ path: `${dir}/eliminate-confirm-1920x1080.png` });
   }
   expect(info.errors).toHaveLength(0);
+});
+
+// Scenarios 10, 11, 12 and 19 below run a real host and real phones. Seven players mean
+// two minority seats, so removing one of them cannot end the game.
+test('scenario 10: the host picks a player, confirms, and every phone hears about it', async ({
+  browser,
+}) => {
+  const game = await startedGame(browser, 7);
+  const { page } = game.host;
+  const target = game.majority[0]!;
+
+  await avatar(page, target.nickname).click();
+  await expect(
+    dialog(page).getByRole('heading', {
+      name: `確定要淘汰玩家 ${target.nickname} 嗎？`,
+    }),
+  ).toBeVisible();
+  await dialog(page).getByRole('button', { name: '確認淘汰' }).click();
+
+  await expect(page.locator('.host-reveal')).toBeVisible();
+  for (const seat of game.seats) {
+    await expect(
+      seat.page.getByText(
+        seat === target ? '你被淘汰了' : `${target.nickname} 被淘汰了，是平民`,
+      ),
+    ).toBeVisible();
+  }
+});
+
+test('scenario 11: voting out a majority player shows the wrong-catch reveal', async ({
+  browser,
+}) => {
+  const game = await startedGame(browser, 7);
+  const { page } = game.host;
+  const target = game.majority[0]!;
+
+  await eliminate(page, target.nickname);
+  await expect(page.locator('.host-reveal')).toHaveAttribute(
+    'data-outcome',
+    'wrong',
+  );
+  await expect(
+    page.getByRole('heading', { level: 1, name: '淘汰的是平民！' }),
+  ).toBeVisible();
+  await expect(page.getByText('糟糕！你們抓錯人了！')).toBeVisible();
+  await expect(
+    page.locator('.host-reveal').getByText(target.nickname),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: '下一輪' })).toBeVisible();
+});
+
+test('scenario 12: voting out a minority player shows the caught reveal', async ({
+  browser,
+}) => {
+  const game = await startedGame(browser, 7);
+  const { page } = game.host;
+  const target = game.minority[0]!;
+
+  await eliminate(page, target.nickname);
+  await expect(page.locator('.host-reveal')).toHaveAttribute(
+    'data-outcome',
+    'caught',
+  );
+  await expect(
+    page.getByRole('heading', { level: 1, name: '成功抓到臥底！' }),
+  ).toBeVisible();
+  await expect(page.getByText('漂亮！成功找出一位臥底！')).toBeVisible();
+  await expect(
+    page.locator('.host-reveal').getByText(target.nickname),
+  ).toBeVisible();
+  await expect(
+    target.page.getByText('你被淘汰了'),
+    'the caught player is told, not the table',
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: '看結果' })).toHaveCount(0);
+});
+
+test('scenario 19: an eliminated player cannot be eliminated again', async ({
+  browser,
+}) => {
+  const game = await startedGame(browser, 7);
+  const { page, roomId } = game.host;
+  const target = game.majority[0]!;
+  await eliminate(page, target.nickname);
+  await page.getByRole('button', { name: '下一輪' }).click();
+  await expect(round(page, 2)).toBeVisible();
+
+  const out = avatar(page, target.nickname);
+  await expect(out).toBeDisabled();
+  await out.click({ force: true });
+  await expect(dialog(page)).toHaveCount(0);
+
+  // The screen refuses it, and so does the server: replay the request with the
+  // host's own token, the way a stale or hand-made client would send it.
+  const hostToken = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    `wd:host:${roomId}`,
+  );
+  const socket = io(new URL(page.url()).origin, {
+    transports: ['websocket'],
+  });
+  try {
+    expect(
+      (await socket.emitWithAck('host:auth', { hostToken })).ok,
+      'host auth',
+    ).toBe(true);
+    const playerId = playerIdOf(game.host.frames, target.nickname);
+    const ack = await socket.emitWithAck('game:eliminate', {
+      roundNumber: 2,
+      playerId,
+    });
+    expect(ack).toMatchObject({ ok: false, code: 'ALREADY_ELIMINATED' });
+  } finally {
+    socket.disconnect();
+  }
+  await expect(round(page, 2)).toBeVisible();
+  await expect(page.getByText('已淘汰')).toHaveCount(1);
 });

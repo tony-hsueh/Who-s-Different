@@ -23,7 +23,12 @@ export default defineConfig(
     languageOptions: { globals: globals.browser },
   },
   {
-    files: ['src/server/**/*.ts', 'e2e/**/*.ts', '*.config.{js,ts}'],
+    files: [
+      'src/server/**/*.ts',
+      'tests/**/*.ts',
+      'e2e/**/*.ts',
+      '*.config.{js,ts}',
+    ],
     languageOptions: { globals: globals.node },
   },
   prettier,

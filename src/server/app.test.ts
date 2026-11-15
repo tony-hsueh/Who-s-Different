@@ -37,6 +37,17 @@ describe('GET /healthz', () => {
   });
 });
 
+describe('response headers', () => {
+  it('does not announce the framework', async () => {
+    const dir = makeClientDir('<html></html>');
+    const { app } = startApp({ clientDir: dir });
+    for (const path of ['/healthz', '/config', '/', '/room/ABCD']) {
+      const res = await request(app).get(path);
+      expect(res.headers['x-powered-by'], path).toBeUndefined();
+    }
+  });
+});
+
 describe('static client (production)', () => {
   const html = '<!doctype html><title>spa</title><div id="root"></div>';
 

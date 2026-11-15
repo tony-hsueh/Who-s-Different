@@ -21,6 +21,7 @@
 | [PR-14 多人 Playwright E2E 測試](#pr-14-多人-playwright-e2e-測試)                                                                                  | 21 個情境、共用 Server、失敗產物              |
 | [PR-13 遊戲封面與視覺整合](#pr-13-遊戲封面與視覺整合)                                                                                              | SVG 素材、深色模式、對比檢查                  |
 | [PR-15 探索式 QA、實機測試與交付文件](#pr-15-探索式-qa實機測試與交付文件)                                                                          | QA 結論、文件、Dockerfile                     |
+| [修正 QA-01、QA-09](#修正-qa-01qa-09)                                                                                                              | 心跳 10 秒、換網路立刻重連、按鈕連線前停用    |
 
 ### 總覽的待決事項假設用在哪裡
 
@@ -296,3 +297,15 @@
 - **Dockerfile：多階段、Node 20、Debian slim。** 建置階段裝 Python 3、make、g++（`better-sqlite3` 沒有預編譯檔時要編譯），`npm ci`、`npm run build`、`npm prune --omit=dev`；執行階段只複製 `node_modules`、`dist`、`package.json`，用 `node` 使用者，`LOG_DB_PATH=/data/events.db` 搭配 volume，內建 `HEALTHCHECK`。選 Debian 而不是 Alpine，因為 `better-sqlite3` 的預編譯檔以 glibc 為主，Alpine（musl）容易退回編譯。映像檔不含 `tsx`，所以沒有 CLI，查 Log 用 HTTP 端點。
 - **`og:image` 維持相對路徑。** PR-13 留給這一票決定。結論：不改，列為已知的後續改善，由 Server 回 `index.html` 時用 `PUBLIC_BASE_URL` 換成絕對網址。
 - **反向代理只寫文件，不放設定檔進 repo。** Caddy 與 Nginx 範例在 `deployment.md`，沒有實際跑過，文件裡有註明。
+
+## 修正 QA-01、QA-09
+
+這是修復 PR，不是票。Tony 先核准了設計，下面是照那個設計做時自己決定的細節。
+
+- **心跳 10 秒加 10 秒（QA-01）。** `pingInterval`、`pingTimeout` 成為 `createApp` 的選項（`pingIntervalMs`、`pingTimeoutMs`），預設各 10 秒，測試可以覆寫。最久 20 秒偵測，原本是 45 秒。QA-01 原本建議的 5 秒逾時沒採用，因為手機卡頓時容易誤判斷線。
+- **換網路與回到前景的處理放在 `ConnectionStore`。** 監聽 `window` 的 `online` 與 `document` 的 `visibilitychange`，只在 `start()` 到 `stop()` 之間有效。`online` 一律換新連線（`reconnect()`：`disconnect()` 再 `connect()`，不等退避）：瀏覽器說網路回來，代表舊連線大多是上一個網路留下的殘骸。分頁變成可見時：沒連線就重連；已連線則看背景多久，超過 10 秒（一個心跳）才換新連線，更短的話最多漏一個 ping，保留原連線，避免每次切分頁都閃一下「連線中…」。
+- **沒有另做「探測用」請求。** 另一個選項是回到前景時送一個短逾時的請求確認連線還活著，但那要在協定新增一個事件（也要過限流與測試）。用背景時間門檻加 `online` 事件就夠，也不用動協定。
+- **不會多出身分。** 換新連線沿用 PR-06／PR-08 的規則：一條 socket 綁一個身分，每次連上都用存在 `localStorage` 的 Token 重新驗證（`reauth`）。舊 socket 在 Server 端留到心跳逾時，因為連線追蹤是集合，不影響在線狀態。測試檢查新連線送出的是同一個 Token、沒有第二次 `room:create` 或 `room:join`。
+- **`ServerButton` 是共用做法（QA-09）。** `useServerStatus()` 回傳 `ready`、`connecting`、`unreachable`（連線前超過 5 秒）與 `retry`；`ServerButton` 在 `ready` 時就是一般的 `Button`，名稱不變（「建立房間」「加入」），其餘時間停用並顯示「連線中…」或「連不上伺服器」，後者旁邊多一個「重試」按鈕，按下去呼叫 `reconnect()` 並重新計 5 秒。計時只算在畫面上有這顆按鈕的期間，不放進 `ConnectionStore`。
+- **套用範圍。** 首頁「建立房間」、玩家「加入」（連線中途斷線時表單還在，按鈕會停用，暱稱保留）、主持人 Lobby「開始遊戲」、結束畫面「再玩一場」。其他按鈕（淘汰確認、下一輪、離開房間）是在對話框或揭曉畫面裡，這一次不動，避免擴大範圍。
+- **E2E 與 `getByRole`。** 連線前按鈕名稱是「連線中…」，所以 E2E 用「建立房間」找按鈕時 Playwright 會等到它出現且可按，預設 worker 數下的偶發失敗（test-report.md）因此消失。

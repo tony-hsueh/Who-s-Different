@@ -19,7 +19,9 @@ test('another browser on the host URL is told it has no host permission', async 
   );
 
   // The room is still running for its real host.
-  await expect(host.page.getByText(host.roomCode)).toBeVisible();
+  await expect(host.page.locator('.host-lobby__code')).toHaveText(
+    host.roomCode,
+  );
 
   await page.getByRole('button', { name: '回首頁' }).click();
   await expect(page).toHaveURL('/');
@@ -29,7 +31,10 @@ test('a saved host token for a room that does not exist shows 房間已失效', 
   page,
 }) => {
   await page.addInitScript(() =>
-    localStorage.setItem('wd:host:does-not-exist', 'stale-token'),
+    localStorage.setItem(
+      'wd:host:does-not-exist',
+      'does-not-exist.stale-secret',
+    ),
   );
   await page.goto('/host/does-not-exist');
   await expect(page.getByRole('heading', { name: '房間已失效' })).toBeVisible();

@@ -1,21 +1,80 @@
-import { useParams } from 'react-router';
-import { useConnected, usePlayerSession, useRoomState } from '../../net/hooks';
+import { useNavigate, useParams } from 'react-router';
+import type { PublicPlayer } from '../../../shared';
+import {
+  useConnected,
+  usePlayerSession,
+  usePlayerState,
+  useRequest,
+  useRoomState,
+} from '../../net/hooks';
+import { clearPlayerToken } from '../../net/session-storage';
+import { FullscreenMessage } from '../../ui/FullscreenMessage';
 import { RoomInvalid } from '../RoomInvalid';
+import { JoinForm } from './JoinForm';
+import { PlayerFinished } from './PlayerFinished';
+import { SecretCard } from './SecretCard';
+import { Waiting } from './Waiting';
+import './player.css';
 
-// Placeholder: PR-10 to PR-12 build the join form, waiting room and cards here.
 export function PlayerPage() {
   const { roomCode = '' } = useParams();
-  const { status } = usePlayerSession(roomCode);
+  const { status, reauth } = usePlayerSession(roomCode);
   const connected = useConnected();
-  const state = useRoomState();
+  const room = useRoomState();
+  const mine = usePlayerState();
+  const request = useRequest();
+  const navigate = useNavigate();
 
   if (status === 'invalid') return <RoomInvalid />;
+  if (status === 'no-token') {
+    return <JoinForm roomCode={roomCode} onJoined={reauth} />;
+  }
+  // While the link is down the card is not drawn, so it is hidden again once it is back.
+  if (status !== 'ready' || !connected || !room || !mine) {
+    return <FullscreenMessage title="連線中…" />;
+  }
 
-  return (
-    <main>
-      <h1>玩家畫面</h1>
-      <p>房間代碼：{state?.roomCode ?? roomCode.toUpperCase()}</p>
-      {!connected && <p>連線中…</p>}
-    </main>
-  );
+  const self: PublicPlayer = room.players.find(
+    (p) => p.playerId === mine.playerId,
+  ) ?? {
+    playerId: mine.playerId,
+    nickname: '我',
+    avatarColor: '#5b3df5',
+    avatarIndex: 0,
+    eliminated: mine.eliminated,
+    online: true,
+  };
+
+  async function leave() {
+    const ack = await request('room:leave', {});
+    if (!ack.ok) return;
+    clearPlayerToken(roomCode);
+    void navigate('/', { replace: true });
+  }
+
+  switch (mine.phase) {
+    case 'lobby':
+      return (
+        <Waiting
+          self={self}
+          playerCount={room.players.length}
+          onLeave={() => void leave()}
+        />
+      );
+    case 'finished':
+      return <PlayerFinished playerId={mine.playerId} result={room.result} />;
+    case 'playing':
+    case 'reveal':
+      // PR-12 adds the reveal screen; until then the card stays up.
+      return mine.secretWord === null ? (
+        <FullscreenMessage title="連線中…" />
+      ) : (
+        <SecretCard
+          self={self}
+          roundNumber={mine.roundNumber}
+          eliminated={mine.eliminated}
+          word={mine.secretWord}
+        />
+      );
+  }
 }

@@ -51,7 +51,7 @@ export const usePlayerSession = (roomCode: string) =>
 type Request = <E extends keyof Requests>(
   event: E,
   payload: Requests[E]['payload'],
-  options?: { silent?: boolean },
+  options?: { silent?: boolean; roomMayBeMissing?: boolean },
 ) => Promise<Ack<Requests[E]['data']>>;
 
 // Sends a request and shows a Chinese toast when it fails (pass `silent` to handle it yourself).
@@ -60,7 +60,7 @@ export function useRequest(): Request {
   const toast = useToast();
   return useCallback<Request>(
     async (event, payload, options) => {
-      const ack = await store.request(event, payload);
+      const ack = await store.request(event, payload, options);
       if (!ack.ok && !options?.silent) toast.show(errorMessage(ack.code));
       return ack;
     },

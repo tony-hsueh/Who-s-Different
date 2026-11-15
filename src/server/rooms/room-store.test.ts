@@ -23,9 +23,7 @@ describe('createRoom', () => {
     expect(created.room.roomCode).toMatch(/^[^0O1I]{6}$/);
     expect(created.room.game).toBeUndefined();
     expect(created.room.players).toEqual([]);
-    expect(created.hostToken).toMatch(
-      new RegExp(`^${created.room.roomId}[.][A-Za-z0-9_-]{43}$`),
-    );
+    expect(created.hostToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(store.authenticateHost(created.hostToken)).toEqual({
       ok: true,
       roomId: created.room.roomId,
@@ -99,9 +97,7 @@ describe('joinRoom', () => {
     const a = store.joinRoom(created.room.roomCode, 'a');
     const b = store.joinRoom(created.room.roomCode, 'b');
     if (!a.ok || !b.ok) throw new Error('expected ok');
-    expect(a.sessionToken).toMatch(
-      new RegExp(`^${created.room.roomId}[.][A-Za-z0-9_-]{43}$`),
-    );
+    expect(a.sessionToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(a.sessionToken).not.toBe(b.sessionToken);
     expect(a.player.playerId).not.toBe(b.player.playerId);
   });
@@ -527,66 +523,6 @@ describe('sweepExpired', () => {
     store.joinRoom(mustRoom(store, roomId).roomCode, 'keepalive');
     store.sweepExpired();
     expect(store.authenticateHost(hostToken)).toMatchObject({
-      ok: false,
-      code: 'INVALID_TOKEN',
-    });
-  });
-});
-
-describe('setPlayerOnline', () => {
-  it('flips only that player and keeps the room otherwise as it was', () => {
-    const { store, advance } = setup();
-    const { roomId, players } = lobbyWith(store, 4);
-    const before = mustRoom(store, roomId);
-    advance(1000);
-
-    const updated = store.setPlayerOnline(
-      players[1]?.player.playerId ?? '',
-      true,
-    );
-
-    expect(updated?.players.map((p) => p.online)).toStrictEqual([
-      false,
-      true,
-      false,
-      false,
-    ]);
-    expect(updated?.lastActivityAt).toBe(before.lastActivityAt);
-    expect(before.players.every((p) => !p.online)).toBe(true);
-  });
-
-  it('returns undefined for a player in no room', () => {
-    const { store } = setup();
-    expect(store.setPlayerOnline('nobody', true)).toBeUndefined();
-  });
-});
-
-describe('tokens of a room that is gone', () => {
-  it('answers ROOM_NOT_FOUND once the room was swept, and INVALID_TOKEN for garbage', () => {
-    const { store, advance } = setup();
-    const { roomId, players } = lobbyWith(store, 4);
-    const token = players[0]?.sessionToken ?? '';
-    advance(ROOM_IDLE_TTL_MS);
-    expect(store.sweepExpired()).toStrictEqual([roomId]);
-
-    expect(store.authenticatePlayer(token)).toMatchObject({
-      ok: false,
-      code: 'ROOM_NOT_FOUND',
-    });
-    expect(store.authenticateHost('nope')).toMatchObject({
-      ok: false,
-      code: 'INVALID_TOKEN',
-    });
-    expect(store.authenticateHost('missing.nope')).toMatchObject({
-      ok: false,
-      code: 'ROOM_NOT_FOUND',
-    });
-  });
-
-  it('keeps INVALID_TOKEN for a wrong secret on a live room', () => {
-    const { store } = setup();
-    const { roomId } = lobbyWith(store, 4);
-    expect(store.authenticateHost(`${roomId}.wrong`)).toMatchObject({
       ok: false,
       code: 'INVALID_TOKEN',
     });

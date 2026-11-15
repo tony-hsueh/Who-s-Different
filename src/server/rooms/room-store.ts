@@ -111,7 +111,7 @@ export class RoomStore {
       recentQuestionIds: [],
       lastActivityAt: this.deps.now(),
     };
-    const hostToken = this.issueToken(room.roomId);
+    const hostToken = this.deps.generateToken();
     this.rooms.set(room.roomId, room);
     this.sessions.registerHost(hostToken, room.roomId);
     return { ok: true, room, hostToken };
@@ -155,7 +155,7 @@ export class RoomStore {
       avatarIndex,
       online: false,
     };
-    const sessionToken = this.issueToken(room.roomId);
+    const sessionToken = this.deps.generateToken();
     this.sessions.registerPlayer(sessionToken, room.roomId, player.playerId);
     const updated = this.update(room, { players: [...room.players, player] });
     return { ok: true, room: updated, player, sessionToken };
@@ -242,32 +242,12 @@ export class RoomStore {
     return [...this.rooms.values()].find((r) => r.roomCode === normalized);
   }
 
-  authenticatePlayer(
-    token: string,
-  ): PlayerSession | TokenFailure | RoomFailure {
-    const session = this.sessions.verifyPlayer(token);
-    return session.ok ? session : this.roomGone(token, session);
+  authenticatePlayer(token: string): PlayerSession | TokenFailure {
+    return this.sessions.verifyPlayer(token);
   }
 
-  authenticateHost(token: string): HostSession | TokenFailure | RoomFailure {
-    const session = this.sessions.verifyHost(token);
-    return session.ok ? session : this.roomGone(token, session);
-  }
-
-  // Connection state is not activity, so it leaves lastActivityAt alone.
-  setPlayerOnline(playerId: string, online: boolean): Room | undefined {
-    const room = [...this.rooms.values()].find((r) =>
-      r.players.some((p) => p.playerId === playerId),
-    );
-    if (!room) return undefined;
-    const updated: Room = {
-      ...room,
-      players: room.players.map((p) =>
-        p.playerId === playerId ? { ...p, online } : p,
-      ),
-    };
-    this.rooms.set(room.roomId, updated);
-    return updated;
+  authenticateHost(token: string): HostSession | TokenFailure {
+    return this.sessions.verifyHost(token);
   }
 
   // Drops rooms idle for 2 hours, then expired tokens. Returns the removed
@@ -283,27 +263,6 @@ export class RoomStore {
     }
     this.sessions.sweepExpired(now);
     return removed;
-  }
-
-  // Tokens start with their room id, so a token nobody knows but whose room is
-  // gone (after a restart or a sweep) can be told apart from garbage.
-  private issueToken(roomId: string): string {
-    return `${roomId}.${this.deps.generateToken()}`;
-  }
-
-  private roomGone(
-    token: string,
-    failure: TokenFailure,
-  ): TokenFailure | RoomFailure {
-    const dot = token.indexOf('.');
-    if (
-      failure.code === 'INVALID_TOKEN' &&
-      dot > 0 &&
-      !this.rooms.has(token.slice(0, dot))
-    ) {
-      return fail('ROOM_NOT_FOUND', 'The room no longer exists');
-    }
-    return failure;
   }
 
   private update(room: Room, patch: Partial<Room>): Room {

@@ -1,8 +1,7 @@
 import type { AckFailure } from '../shared/protocol.js';
 import { hostChannel, playerChannel, roomChannel } from './broadcast.js';
 
-// Who a socket is. A socket may bind again as the same identity (a repeated
-// auth) but never switch to another one.
+// Who a socket is. First binding only; PR-06 reworks this for reconnects.
 export type Binding =
   | { kind: 'host'; roomId: string }
   | { kind: 'player'; roomId: string; playerId: string };
@@ -15,36 +14,18 @@ type Bindable = {
   leave(room: string): unknown;
 };
 
-export function canBind(
-  current: Binding | undefined,
-  target: Binding,
-): boolean {
-  if (!current) return true;
-  if (current.kind !== target.kind || current.roomId !== target.roomId) {
-    return false;
-  }
-  return (
-    current.kind === 'host' ||
-    (target.kind === 'player' && current.playerId === target.playerId)
-  );
-}
-
-export function bindHost(socket: Bindable, roomId: string): Binding {
-  const binding: Binding = { kind: 'host', roomId };
-  socket.data.binding = binding;
+export function bindHost(socket: Bindable, roomId: string): void {
+  socket.data.binding = { kind: 'host', roomId };
   void socket.join([roomChannel(roomId), hostChannel(roomId)]);
-  return binding;
 }
 
 export function bindPlayer(
   socket: Bindable,
   roomId: string,
   playerId: string,
-): Binding {
-  const binding: Binding = { kind: 'player', roomId, playerId };
-  socket.data.binding = binding;
+): void {
+  socket.data.binding = { kind: 'player', roomId, playerId };
   void socket.join([roomChannel(roomId), playerChannel(playerId)]);
-  return binding;
 }
 
 export function unbind(socket: Bindable): void {

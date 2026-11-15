@@ -17,7 +17,11 @@ test.afterEach(() => {
 
 async function shot(page: Page, name: string) {
   const dir = process.env.EVIDENCE_DIR;
-  if (dir) await page.screenshot({ path: `${dir}/${name}.png` });
+  if (dir)
+    await page.screenshot({
+      path: `${dir}/${name}.png`,
+      animations: 'disabled',
+    });
 }
 
 const horizontalOverflow = (page: Page) =>

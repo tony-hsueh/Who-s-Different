@@ -184,3 +184,17 @@
 - **「題目 ID 不同」的 E2E 檢查改用詞語。** 題目 ID 不會送到任何 Client（也不該送），PR-07 的管理端點不在這個分支。E2E 在再玩一場後，用玩家各自的詞算出這一場的詞組，與上一場結束畫面公布的詞組比對。Server 本來就不會連續抽到同一題，所以詞組不同等於題目不同。這是間接證據，不是直接比對 ID。
 - **既有 E2E 的調整。** `host-eliminate.spec.ts` 原本用第二條主持人連線推進下一輪，現在改按真正的「下一輪」。「頁面不含陣營」的檢查，揭曉標題與副標是被淘汰者陣營，屬於公開資訊，檢查前先濾掉。
 - **角色顯示名稱集中在 `lib/role-labels.ts`。** 平民、臥底的叫法只有一處。
+## PR-06 斷線重連與在線狀態
+
+沿用總覽假設 1（不做踢人）與假設 4（Token 12 小時）。票上沒寫清楚的地方，我這樣選。
+
+- **連線追蹤用 Socket ID Set。** `src/server/presence.ts` 的 `PresenceTracker` 對每個身分（玩家用 `playerId`，主持人用房間）存一組 socket id。連上就加進集合，斷線只移除那一條，集合空了才算離線。另外兩種做法我沒選。「Current Socket ID」只記最後一條，舊 socket 晚到的 disconnect 會把新 socket 也當成斷了，要靠比對 id 才擋得住。「Connection Generation」每次連線遞增一個序號，disconnect 要帶序號才算數，要多存一個計數器，也要處理重複 disconnect。Set 不用比對先後，同一條 socket 重複斷線只是再刪一次，也自然支援一個玩家或主持人同時開多個分頁。代價是多存一個集合，量很小。
+- **斷線要等 3 秒才公布。** `presence-sync.ts` 在最後一條連線斷掉後起一個計時器（`createApp` 的 `presenceDebounceMs`，預設 3000），計時內重連就取消，不廣播。計時到了才把 `online` 改成 `false` 並廣播 `room:state`。第一條連線上線（`player:auth`）立刻改成 `true` 並廣播，不等。測試把 debounce 調成幾十毫秒。
+- **在線狀態只廣播公開狀態。** 離線與上線只送 `room:state`，不重送每個人的 `game:player-state`，因為私人狀態沒有變。
+- **連線不算房間活動。** `setPlayerOnline` 不更新 `lastActivityAt`。否則一個開著不動的分頁會讓房間永遠不被清掉。PR-04 把這件事留給 PR-06，這裡決定不算。
+- **重新驗證。** `player:auth` / `host:auth` 先驗 Token，再把這條新 socket 綁到原本的身分，回傳最新的公開與私人狀態，不建立新玩家、不動詞語。同一條 socket 用同一個身分再送一次是允許的（等於重新取得狀態）。同一條 socket 要換成另一個玩家、另一個房間，或在玩家與主持人之間切換，仍回 `ALREADY_AUTHENTICATED`。舊的「已綁定就一律拒絕」改成這條規則，順序也變成先驗 Token 再判斷綁定，所以已綁定的 socket 拿到壞 Token 會得到 `INVALID_TOKEN`。
+- **主持人離線。** 主持人有自己的連線集合與同樣的 debounce，但房間狀態沒有主持人在線欄位，所以只寫 Log，不廣播，也不影響玩家與遊戲。
+- **玩家離開房間時清掉連線紀錄。** `room:leave` 成功後清掉那位玩家的計時器與集合。他其他分頁之後斷線不會再改房間。
+- **Server 重啟後回 `ROOM_NOT_FOUND`。** 重啟後 Token 表是空的，只看雜湊分不出「Token 是假的」還是「房間已經不在」。我讓 Token 以房間 id 開頭（`{roomId}.{32 位元組隨機}`）。Token 查不到，而開頭的房間 id 也不存在時回 `ROOM_NOT_FOUND`；房間還在但密碼不對，或是格式不符，仍回 `INVALID_TOKEN`。房間 id 本來就出現在公開狀態裡，不是秘密，所以這個前綴沒有洩漏新資訊；Token 的隨機部分不變，仍然只存雜湊。房間被清除過期後，舊 Token 也改成回 `ROOM_NOT_FOUND`。
+- **Log。** 新增 `PLAYER_DISCONNECTED`、`PLAYER_RECONNECTED`、`HOST_DISCONNECTED`、`HOST_RECONNECTED` 四種事件，只在 debounce 後真的有變化時寫，`payload` 是空的。`EventLogger` 介面不動。「重連」指之前記過斷線的身分再次上線，第一次驗證不算。
+- **Lobby 中離線的玩家照樣保留。** 沿用假設 1，不做主持人移除，離線不會自動踢出。

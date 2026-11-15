@@ -23,8 +23,12 @@ export const playerChannel = (playerId: string) => `player:${playerId}`;
 
 // The public state goes to the room channel (host and players). Each private
 // state goes only to that player's channel, which no host socket ever joins.
-export function broadcastRoom(io: AppServer, room: Room): void {
+export function broadcastPublic(io: AppServer, room: Room): void {
   io.to(roomChannel(room.roomId)).emit('room:state', toPublicRoomState(room));
+}
+
+export function broadcastRoom(io: AppServer, room: Room): void {
+  broadcastPublic(io, room);
   for (const { playerId } of room.players) {
     const state = toPlayerPrivateState(room, playerId);
     if (state) io.to(playerChannel(playerId)).emit('game:player-state', state);

@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import express from 'express';
 import { Server } from 'socket.io';
 import { contentSecurityPolicy } from './csp.js';
+import { createAdminRouter, type AdminOptions } from './admin/routes.js';
 import { closeRooms, type AppServer } from './broadcast.js';
 import { logSafely } from './handlers/handle.js';
 import { noopLogger, type EventLogger } from './log/noop-logger.js';
@@ -21,6 +22,8 @@ export interface CreateAppOptions {
   clientDir?: string;
   store?: RoomStore;
   logger?: EventLogger;
+  // Leave out to disable the /admin routes (they answer 404).
+  admin?: AdminOptions;
   now?: () => number;
   sweepIntervalMs?: number;
   rateLimit?: RateLimitOptions;
@@ -33,6 +36,7 @@ export function createApp({
   now = Date.now,
   store = new RoomStore({ bank: questionBank, now }),
   logger = noopLogger,
+  admin,
   sweepIntervalMs = DEFAULT_SWEEP_INTERVAL_MS,
   rateLimit = DEFAULT_RATE_LIMIT,
   publicBaseUrl = null,
@@ -51,6 +55,7 @@ export function createApp({
   app.get('/config', (_req, res) => {
     res.json({ publicBaseUrl });
   });
+  app.use('/admin', createAdminRouter(admin));
 
   if (clientDir) {
     const root = resolve(clientDir);

@@ -13,6 +13,7 @@ import type {
   LogEvent,
   PrivateGameRecord,
 } from '../log/noop-logger.js';
+import type { PresenceService } from '../presence-sync.js';
 import type { RateLimiter } from '../rate-limit.js';
 import type { RoomStore } from '../rooms/room-store.js';
 import { schemas } from './validate.js';
@@ -29,6 +30,7 @@ export type HandlerEnv = {
   socket: AppSocket;
   store: RoomStore;
   logger: EventLogger;
+  presence: PresenceService;
   limiter: RateLimiter;
 };
 

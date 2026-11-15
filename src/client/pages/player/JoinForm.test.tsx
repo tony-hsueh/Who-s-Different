@@ -36,6 +36,8 @@ describe('JoinForm when the link drops (QA-09)', () => {
       name: '連線中…',
     }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
+    // A disabled submit button is what stops Enter from submitting the form.
+    expect(button.type).toBe('submit');
     act(() => socket.serverConnect());
     expect(
       (screen.getByRole('button', { name: '加入' }) as HTMLButtonElement)

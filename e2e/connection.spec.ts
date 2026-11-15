@@ -84,14 +84,24 @@ test('QA-09: an unreachable server shows 連不上伺服器 and 重試 reconnect
     viewport: { width: 1920, height: 1080 },
   });
   const page = await context.newPage();
-  await page.route('**/socket.io/**', (route) => route.abort());
+  // The server is unreachable until the retry click, then every handshake is let through
+  // together, so automatic reconnection cannot remove the button before it is clicked.
+  let mode: 'abort' | 'hold' = 'abort';
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route('**/socket.io/**', async (route) => {
+    if (mode === 'abort') return route.abort();
+    await held;
+    await route.continue();
+  });
   await page.goto('/');
 
   await expect(page.getByText('連不上伺服器')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByRole('button', { name: '建立房間' })).toHaveCount(0);
 
-  await page.unroute('**/socket.io/**');
+  mode = 'hold';
   await page.getByRole('button', { name: '重試' }).click();
+  release();
   await expect(page.getByRole('button', { name: '建立房間' })).toBeEnabled();
   await expect(page.getByText('連不上伺服器')).toHaveCount(0);
 });
@@ -108,6 +118,9 @@ test('QA-09: the player 加入 button is disabled while offline and works again 
   await page.context().setOffline(true);
   await expect(connecting(page)).toBeDisabled({ timeout: 15_000 });
   await expect(page.getByLabel('暱稱')).toHaveValue('斷網的人');
+  // Enter must not submit while the button is disabled.
+  await page.getByLabel('暱稱').press('Enter');
+  await expect(errorToast(page)).toHaveCount(0);
 
   await page.context().setOffline(false);
   await page.getByRole('button', { name: '加入' }).click();

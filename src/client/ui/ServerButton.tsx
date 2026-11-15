@@ -14,8 +14,9 @@ export function ServerButton({ children, disabled, ...rest }: ButtonProps) {
     );
   }
   return (
+    // The type stays as given: a disabled submit button also blocks Enter in the form.
     <span className="wd-server-button">
-      <Button {...rest} type="button" disabled onClick={undefined}>
+      <Button {...rest} disabled onClick={undefined}>
         {status === 'connecting' ? '連線中…' : '連不上伺服器'}
       </Button>
       {status === 'unreachable' && (

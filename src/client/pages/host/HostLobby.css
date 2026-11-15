@@ -21,8 +21,21 @@
   text-align: center;
 }
 
-.host-lobby__title {
+.host-lobby__head {
+  display: flex;
   grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.host-lobby__head .wd-cover {
+  flex: none;
+  width: 10rem;
+  margin: 0;
+}
+
+.host-lobby__title {
   text-align: center;
 }
 
@@ -96,6 +109,11 @@
 }
 
 @media (width < 60rem) {
+  .host-lobby__head {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
   .host-lobby {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;

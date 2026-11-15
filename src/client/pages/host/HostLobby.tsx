@@ -4,6 +4,7 @@ import {
   MIN_PLAYERS,
   type PublicRoomState,
 } from '../../../shared';
+import { Cover } from '../../components/Cover';
 import { PlayerGrid } from '../../components/PlayerGrid';
 import { QrCode } from '../../components/QrCode';
 import { buildJoinUrl } from '../../lib/join-url';
@@ -35,7 +36,10 @@ export function HostLobby({ state }: { state: PublicRoomState }) {
           連線中斷，重新連線中…
         </p>
       )}
-      <h1 className="host-lobby__title">誰跟我不一樣？</h1>
+      <header className="host-lobby__head">
+        <Cover size="sm" />
+        <h1 className="host-lobby__title">誰跟我不一樣？</h1>
+      </header>
       <section className="host-lobby__join" aria-label="加入方式">
         <div className="host-lobby__qr">
           {joinUrl && <QrCode value={joinUrl} label="加入房間的 QR Code" />}

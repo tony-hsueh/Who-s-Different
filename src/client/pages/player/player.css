@@ -145,7 +145,7 @@
 }
 
 .wd-reveal[data-role='minority'] {
-  box-shadow: inset 0 0 0 3px #1d8a4a;
+  box-shadow: inset 0 0 0 3px var(--color-success);
 }
 
 .wd-reveal[data-role='majority'] {

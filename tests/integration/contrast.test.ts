@@ -41,32 +41,34 @@ function ratio(a: string, b: string) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-// Text on background pairs the screens actually use.
-const PAIRS: [string, string][] = [
-  ['color-ink', 'color-bg'],
-  ['color-ink', 'color-surface'],
-  ['color-ink-soft', 'color-bg'],
-  ['color-ink-soft', 'color-surface'],
-  ['color-primary-ink', 'color-primary'],
-  ['color-danger-ink', 'color-danger'],
-  ['color-danger', 'color-bg'],
-  ['color-danger', 'color-surface'],
-  ['color-primary', 'color-bg'],
-  ['color-success', 'color-bg'],
-  ['color-success', 'color-surface'],
-  ['color-tag-ink', 'color-tag'],
+// Text on background pairs the screens actually use: [text, background, minimum ratio].
+// The reveal titles and winner banner are large bold text, where WCAG AA asks for 3:1.
+const PAIRS: [string, string, number][] = [
+  ['color-ink', 'color-bg', 4.5],
+  ['color-ink', 'color-surface', 4.5],
+  ['color-ink-soft', 'color-bg', 4.5],
+  ['color-ink-soft', 'color-surface', 4.5],
+  ['color-primary-ink', 'color-primary', 4.5],
+  ['color-danger-ink', 'color-danger', 4.5],
+  ['color-danger', 'color-bg', 4.5],
+  ['color-danger', 'color-surface', 4.5],
+  ['color-primary', 'color-bg', 4.5],
+  ['color-tag-ink', 'color-tag', 4.5],
+  ['color-success', 'color-bg', 3],
+  ['color-success', 'color-success-tint', 3],
+  ['color-danger', 'color-danger-tint', 3],
 ];
 
 describe.each([
   ['light', light],
   ['dark', dark],
-])('%s tokens meet WCAG AA (4.5:1) for text', (_, tokens) => {
-  it.each(PAIRS)('%s on %s', (fg, bg) => {
+])('%s tokens meet WCAG AA for text', (_, tokens) => {
+  it.each(PAIRS)('%s on %s (>= %s)', (fg, bg, min) => {
     const fgValue = tokens[fg];
     const bgValue = tokens[bg];
     expect(fgValue, fg).toMatch(/^#[0-9a-f]{6}$/i);
     expect(bgValue, bg).toMatch(/^#[0-9a-f]{6}$/i);
-    expect(ratio(fgValue!, bgValue!)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(fgValue!, bgValue!)).toBeGreaterThanOrEqual(min);
   });
 });
 

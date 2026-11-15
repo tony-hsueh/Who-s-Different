@@ -1,0 +1,21 @@
+.wd-cover {
+  width: min(100%, 36rem);
+  margin-inline: auto;
+}
+
+.wd-cover[data-size='sm'] {
+  width: min(100%, 15rem);
+}
+
+.wd-cover img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+/* Projector: the home screen has the whole wall, but the button must stay in view. */
+[data-mode='projector'] .wd-cover:not([data-size='sm']) {
+  width: min(100%, 44rem, 52dvh * 800 / 380);
+}

@@ -1,4 +1,6 @@
 :root {
+  color-scheme: light dark;
+
   --color-bg: #fff7e6;
   --color-surface: #ffffff;
   --color-ink: #1f1b3a;
@@ -8,6 +10,12 @@
   --color-accent: #ffc933;
   --color-danger: #d62839;
   --color-danger-ink: #ffffff;
+  --color-danger-tint: #fde8ea;
+  /* Green only passes AA for large text (3:1); every use is a title or a card outline. */
+  --color-success: #1d8a4a;
+  --color-success-tint: #e3f6ea;
+  --color-tag: #1f1b3a;
+  --color-tag-ink: #ffffff;
   --color-border: #e4d9c3;
   --color-overlay: rgb(31 27 58 / 60%);
 
@@ -31,6 +39,28 @@
   --shadow-card: 0 0.25rem 0 rgb(31 27 58 / 12%);
   --motion-fast: 120ms;
   --motion-slow: 300ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #14122b;
+    --color-surface: #221f42;
+    --color-ink: #f4f1ff;
+    --color-ink-soft: #b9b4e0;
+    --color-primary: #a89bff;
+    --color-primary-ink: #14122b;
+    --color-accent: #ffc933;
+    --color-danger: #ff7a86;
+    --color-danger-ink: #14122b;
+    --color-danger-tint: #3b1a2a;
+    --color-success: #4cc27a;
+    --color-success-tint: #12311f;
+    --color-tag: #3b3766;
+    --color-tag-ink: #ffffff;
+    --color-border: #3b3766;
+    --color-overlay: rgb(0 0 0 / 70%);
+    --shadow-card: 0 0.25rem 0 rgb(0 0 0 / 35%);
+  }
 }
 
 /* Phone: the player's own screen, held at arm's length. */

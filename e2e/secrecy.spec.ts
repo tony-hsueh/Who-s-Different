@@ -41,12 +41,17 @@ test('scenario 9: the host screen and its frames never carry a living player’s
     expect(withoutRevealCopy, `${label}: DOM names a side`).not.toMatch(
       /陣營|臥底|平民/,
     );
-    const livingRoles = frames.all.flatMap((frame) => {
-      const json = packetJson(frame);
-      return json
-        ? roleKeyPaths(json).filter((p) => !p.endsWith('.lastElimination.role'))
-        : [];
-    });
+    // Polling responses batch several packets, separated by .
+    const livingRoles = frames.all
+      .flatMap((frame) => frame.split(''))
+      .flatMap((frame) => {
+        const json = packetJson(frame);
+        return json
+          ? roleKeyPaths(json).filter(
+              (p) => !p.endsWith('.lastElimination.role'),
+            )
+          : [];
+      });
     expect(livingRoles, `${label}: frames carry a role`).toStrictEqual([]);
   };
 

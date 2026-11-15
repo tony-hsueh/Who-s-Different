@@ -135,7 +135,13 @@ export async function openLobby(server: Server, count: number) {
       token: joined.sessionToken,
     });
   }
-  return { host, roomId: created.roomId, roomCode: created.roomCode, players };
+  return {
+    host,
+    hostToken: created.hostToken,
+    roomId: created.roomId,
+    roomCode: created.roomCode,
+    players,
+  };
 }
 
 export async function startedGame(server: Server, count = 4) {

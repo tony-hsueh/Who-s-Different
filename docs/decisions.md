@@ -105,11 +105,11 @@
 - **Logger 介面只加一個選用方法。** `logEvent` 不變。多了選用的 `recordPrivateGame(record)`，專門寫 `game_private_records`。詞語與陣營分配不放進 `LogEvent`，所以 PR-05 的測試（直接檢查 `LogEvent` 裡沒有詞語）照樣成立，PR-06 的假 logger 也不用改。選用方法由 `recordPrivate()` 包住，丟例外只印到 stderr。
 - **`games` 表由事件推出來。** `GAME_STARTED` 的 payload 帶 `playerCount`、`minorityCount`，寫入時新增一列；`GAME_FINISHED` 補上 `finished_at`、`winner`、`rounds`。呼叫端不用另外維護 metadata。
 - **新增的事件。** `WORDS_ASSIGNED`、`ELIMINATION_CONFIRMED`、`WIN_CONDITION_MET`、`SERVER_ERROR`。`PLAYER_DISCONNECTED`、`PLAYER_RECONNECTED` 留給 PR-06 加進型別，因為它們的呼叫端在 PR-06，兩邊各加會互相衝突。資料庫不限制事件名稱，所以 PR-06 合併後不用改 schema。
-- **一局的事件順序。** 開始時依序是 `GAME_STARTED`、`WORDS_ASSIGNED`、`ROUND_STARTED`（第 1 輪）。淘汰時依序是 `ELIMINATION_CONFIRMED`、`PLAYER_ELIMINATED`，達成勝負再加 `WIN_CONDITION_MET`、`GAME_FINISHED`。`GAME_RESET` 帶上剛結束那場的 Game ID 與最後一輪，查那一場時才看得到。
+- **一局的事件順序。** 開始時依序是 `GAME_STARTED`、`WORDS_ASSIGNED`、`ROUND_STARTED`（第 1 輪）。淘汰時依序是 `ELIMINATION_CONFIRMED`、`PLAYER_ELIMINATED`，達成勝負再加 `WIN_CONDITION_MET`、`GAME_FINISHED`。跳過一輪時依序是 `ROUND_SKIPPED`（舊的一輪）、`ROUND_STARTED`（新的一輪），所以每一輪都有開始事件。`GAME_RESET` 帶上剛結束那場的 Game ID 與最後一輪，查那一場時才看得到。
 - **淘汰 payload。** `gameId`、`round`、`eliminatedPlayerId`、`role`（被淘汰者，依規定公開）、`remaining`（淘汰後雙方存活人數）、`winReached`，達成勝負時多一個 `winner`。這是 Log，不是對外資料，所以可以有人數。
 - **`WORDS_ASSIGNED` 只記題目 id 與人數。** 詞語、陣營分配寫在 `game_private_records`。`redact()` 會在寫入前移除 `sessionToken`、`hostToken`、`secretWord`、`majorityWord`、`minorityWord`、`assignments`，任何深度都處理。`game_private_records` 在遊戲一開始就寫，因為票上要求「題目與陣營分配」可查，這張表只能用本機 CLI 讀，HTTP 端點不回傳。
 - **寫入同步、單一交易。** 每筆事件的寫入（含 `games` 更新）包在一個交易裡。排序用 `timestamp` 再用 `rowid`，同一毫秒的事件仍照寫入順序。`event_id` 用 `randomUUID()`。
-- **`SERVER_ERROR`。** Handler 丟例外時記一筆，只放事件名與錯誤類型（`error.name`），不放訊息，避免訊息夾帶資料。對 client 仍回 `INTERNAL_ERROR`，同時照舊記一筆 `OPERATION_REJECTED`。
+- **`SERVER_ERROR`。** Handler 丟例外時記一筆（`OPERATION_REJECTED` 也一樣，會帶上綁定身分所在房間目前的 Game ID 與輪數，查單場時看得到），只放事件名與錯誤類型（`error.name`），不放訊息，避免訊息夾帶資料。對 client 仍回 `INTERNAL_ERROR`，同時照舊記一筆 `OPERATION_REJECTED`。
 - **`schema.sql` 用 `CREATE ... IF NOT EXISTS`。** 每次啟動都會執行，所以重啟不會出錯。`tsc` 不會複製 `.sql`，`npm run build` 最後多一步把它複製到 `dist/server/server/log/`。
 - **路徑與啟動。** `LOG_DB_PATH` 預設 `./data/events.db`（已加進 `.gitignore`），資料夾不存在會自動建立。`ADMIN_TOKEN` 沒設就不給 `createApp` 任何 `admin` 選項。
 - **Admin 端點。** `GET /admin/games/:gameId/events`。`/admin` 一律掛在靜態檔與 SPA fallback 前面，沒設 Token 時所有 `/admin/*` 回 404，不會被 SPA fallback 回成 200。Token 先各自做 SHA-256 再用 `timingSafeEqual` 比，長度不同也是固定時間。缺少或錯誤回 401。查不到事件的 Game ID 回 404。回傳 `{ events: [...] }`，payload 已解析成物件。

@@ -1,0 +1,71 @@
+.wd-avatar {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: calc(var(--avatar-size, 3.5rem) * 1.8);
+  text-align: center;
+}
+
+.wd-avatar__badge {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--avatar-size, 3.5rem);
+  height: var(--avatar-size, 3.5rem);
+  border-radius: var(--radius-full);
+  background: var(--avatar-color, var(--color-primary));
+  color: #fff;
+  box-shadow: var(--shadow-card);
+}
+
+.wd-avatar__badge svg {
+  width: 62%;
+  height: 62%;
+  fill: currentcolor;
+}
+
+.wd-avatar__name {
+  font-size: var(--fs-small, 0.875rem);
+  font-weight: 700;
+}
+
+.wd-avatar__tag {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-ink);
+  color: #fff;
+  font-size: calc(var(--fs-small, 0.875rem) * 0.85);
+  line-height: 1.6;
+}
+
+.wd-avatar__tag[data-tag='eliminated'] {
+  background: var(--color-danger);
+}
+
+.wd-avatar[data-offline='true'] .wd-avatar__badge {
+  opacity: 0.55;
+  outline: 3px dashed var(--color-ink-soft);
+  outline-offset: 2px;
+}
+
+.wd-avatar[data-eliminated='true'] .wd-avatar__badge {
+  filter: grayscale(1);
+}
+
+.wd-avatar[data-eliminated='true'] .wd-avatar__badge::after {
+  content: '';
+  position: absolute;
+  top: 48%;
+  left: -6%;
+  right: -6%;
+  height: 4px;
+  background: var(--color-danger);
+  transform: rotate(-35deg);
+  border-radius: var(--radius-full);
+}
+
+.wd-avatar[data-eliminated='true'] .wd-avatar__name {
+  text-decoration: line-through;
+  color: var(--color-ink-soft);
+}

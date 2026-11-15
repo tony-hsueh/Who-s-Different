@@ -1,12 +1,16 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from './App';
+import { RouterProvider } from 'react-router/dom';
+import { AppProviders } from './AppProviders';
+import { createAppRouter } from './router';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('missing #root element');
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <AppProviders>
+      <RouterProvider router={createAppRouter()} />
+    </AppProviders>
   </StrictMode>,
 );

@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { join, resolve } from 'node:path';
 import express from 'express';
 import { Server } from 'socket.io';
+import { contentSecurityPolicy } from './csp.js';
 import { closeRooms, type AppServer } from './broadcast.js';
 import { logSafely } from './handlers/handle.js';
 import { noopLogger, type EventLogger } from './log/noop-logger.js';
@@ -32,6 +33,8 @@ export function createApp({
   const app = express();
   const httpServer = createServer(app);
   const io: AppServer = new Server(httpServer);
+
+  app.use(contentSecurityPolicy);
 
   app.get('/healthz', (_req, res) => {
     res.json({ ok: true });

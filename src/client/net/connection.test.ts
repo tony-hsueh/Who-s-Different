@@ -1,5 +1,17 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PlayerPrivateState, PublicRoomState } from '../../shared';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from 'vitest';
+import type {
+  ErrorCode,
+  PlayerPrivateState,
+  PublicRoomState,
+} from '../../shared';
 import { ConnectionStore } from './connection';
 import { MockSocket } from './mock-socket';
 import {
@@ -26,13 +38,13 @@ const privateState: PlayerPrivateState = {
 };
 
 let socket: MockSocket;
-let onError: ReturnType<typeof vi.fn>;
+let onError: Mock<(code: ErrorCode) => void>;
 let store: ConnectionStore;
 
 beforeEach(() => {
   localStorage.clear();
   socket = new MockSocket();
-  onError = vi.fn();
+  onError = vi.fn<(code: ErrorCode) => void>();
   store = new ConnectionStore({ socket, onError });
   store.start();
 });

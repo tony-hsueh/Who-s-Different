@@ -313,6 +313,18 @@ describe('request', () => {
     expect(readPlayerToken('ABCD')).toBeNull();
   });
 
+  it('keeps the room open on ROOM_NOT_FOUND when the caller expects it', async () => {
+    store.setIdentity({ kind: 'player', roomCode: 'ABCD' });
+    const promise = store.request(
+      'room:join',
+      { roomCode: 'ABCD', nickname: 'x' },
+      { roomMayBeMissing: true },
+    );
+    socket.answer('room:join', fail('ROOM_NOT_FOUND'));
+    expect(await promise).toMatchObject({ ok: false, code: 'ROOM_NOT_FOUND' });
+    expect(store.getSnapshot().status).not.toBe('invalid');
+  });
+
   it('gives up with INTERNAL_ERROR when the server never answers', async () => {
     vi.useFakeTimers();
     const promise = store.request('game:start', {});

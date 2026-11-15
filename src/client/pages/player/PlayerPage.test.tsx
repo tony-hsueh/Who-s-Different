@@ -436,3 +436,61 @@ describe('finished', () => {
     expect(screen.queryByText('請看大螢幕')).toBeNull();
   });
 });
+
+describe('reveal', () => {
+  const revealRoom = (playerId: string, role: 'majority' | 'minority') =>
+    room({
+      phase: 'reveal',
+      roundNumber: 1,
+      players: players.map((p) => ({
+        ...p,
+        eliminated: p.playerId === playerId,
+      })),
+      lastElimination: { roundNumber: 1, playerId, role },
+    });
+  const revealing = (patch: Partial<PlayerPrivateState> = {}) =>
+    playing({ phase: 'reveal', ...patch });
+
+  it('tells a bystander who is out and which side they were', () => {
+    openAs(revealRoom('p2', 'majority'), revealing());
+    expect(screen.getByText('小華 被淘汰了，是平民')).toBeDefined();
+    expect(screen.queryByText('你被淘汰了')).toBeNull();
+  });
+
+  it('names the minority as 臥底', () => {
+    openAs(revealRoom('p2', 'minority'), revealing());
+    expect(screen.getByText('小華 被淘汰了，是臥底')).toBeDefined();
+  });
+
+  it('tells the eliminated player they are out', () => {
+    openAs(revealRoom('p1', 'minority'), revealing({ eliminated: true }));
+    expect(screen.getByText('你被淘汰了')).toBeDefined();
+    expect(screen.queryByText(/小明 被淘汰了/)).toBeNull();
+  });
+
+  it('keeps the secret card reachable and hidden by default', () => {
+    const { container } = openAs(revealRoom('p2', 'majority'), revealing());
+    expect(container.textContent).not.toContain('蘋果');
+    fireEvent.click(screen.getByRole('button', { name: '查看題目' }));
+    expect(screen.getByText('蘋果')).toBeDefined();
+  });
+
+  it('shows nothing about the living when only one side is revealed', () => {
+    const { container } = openAs(revealRoom('p2', 'majority'), revealing());
+    expect(container.textContent).not.toMatch(/多數|少數|陣營|你是/);
+  });
+
+  it('removes the result when the next round starts and keeps the card state', () => {
+    openAs(revealRoom('p2', 'majority'), revealing());
+    fireEvent.click(screen.getByRole('button', { name: '查看題目' }));
+    act(() => {
+      socket.serverEmit(
+        'room:state',
+        room({ phase: 'playing', roundNumber: 2 }),
+      );
+      socket.serverEmit('game:player-state', playing({ roundNumber: 2 }));
+    });
+    expect(screen.queryByText(/被淘汰了/)).toBeNull();
+    expect(screen.getByText('蘋果')).toBeDefined();
+  });
+});

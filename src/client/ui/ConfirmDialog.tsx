@@ -9,6 +9,10 @@ export interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
+  // Locks the confirm button while the request it triggers is in flight.
+  confirmDisabled?: boolean;
+  // Enter confirms wherever focus is. Off by default, so Enter on the focused cancel button just cancels.
+  confirmOnEnter?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -20,6 +24,8 @@ export function ConfirmDialog({
   confirmLabel = '確定',
   cancelLabel = '取消',
   danger = false,
+  confirmDisabled = false,
+  confirmOnEnter = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -28,8 +34,12 @@ export function ConfirmDialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   // Read through a ref so a parent's inline callback does not restart the focus handling.
   const onCancelRef = useRef(onCancel);
+  const enterRef = useRef<(() => void) | null>(null);
+  const ownsEnterRef = useRef(false);
   useEffect(() => {
     onCancelRef.current = onCancel;
+    ownsEnterRef.current = confirmOnEnter;
+    enterRef.current = confirmDisabled ? null : onConfirm;
   });
 
   useEffect(() => {
@@ -42,10 +52,19 @@ export function ConfirmDialog({
         onCancelRef.current();
         return;
       }
+      if (event.key === 'Enter' && ownsEnterRef.current) {
+        // Always take over Enter here, or the focused cancel button would still activate natively.
+        event.preventDefault();
+        // A held key repeats; the keypress that opened the dialog must not confirm it.
+        if (!event.repeat) enterRef.current?.();
+        return;
+      }
       if (event.key !== 'Tab') return;
       // Keep Tab inside the dialog so the page behind it cannot be reached.
       const buttons = [
-        ...(dialogRef.current?.querySelectorAll('button') ?? []),
+        ...(dialogRef.current?.querySelectorAll<HTMLButtonElement>(
+          'button:not(:disabled)',
+        ) ?? []),
       ];
       const first = buttons[0];
       const last = buttons[buttons.length - 1];
@@ -86,7 +105,11 @@ export function ConfirmDialog({
           <Button ref={cancelRef} variant="secondary" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm}>
+          <Button
+            variant={danger ? 'danger' : 'primary'}
+            disabled={confirmDisabled}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </Button>
         </div>

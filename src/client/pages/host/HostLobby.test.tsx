@@ -172,10 +172,12 @@ describe('HostLobby', () => {
     expect(await screen.findByText(/連線中斷/)).toBeDefined();
   });
 
-  it('moves to the playing placeholder when the game starts', async () => {
+  it('moves to the playing screen when the game starts', async () => {
     await openLobby(state(4));
     pushState(state(4, { phase: 'playing', roundNumber: 1 }));
-    expect(await screen.findByText(/遊戲進行中/)).toBeDefined();
+    expect(
+      await screen.findByRole('heading', { name: 'Round 1' }),
+    ).toBeDefined();
     expect(screen.queryByRole('button', { name: '開始遊戲' })).toBeNull();
   });
 

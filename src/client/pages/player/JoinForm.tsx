@@ -2,6 +2,7 @@ import { useId, useState, type FormEvent } from 'react';
 import { errorMessage } from '../../i18n/errors';
 import { useRequest } from '../../net/hooks';
 import { savePlayerToken } from '../../net/session-storage';
+import { Cover } from '../../components/Cover';
 import { Button } from '../../ui/Button';
 
 export interface JoinFormProps {
@@ -40,6 +41,7 @@ export function JoinForm({ roomCode, onJoined }: JoinFormProps) {
 
   return (
     <main className="wd-player">
+      <Cover size="sm" />
       <h1>加入遊戲</h1>
       <p className="wd-player__room">房間代碼：{roomCode.toUpperCase()}</p>
       <form className="wd-join" onSubmit={(e) => void submit(e)} noValidate>

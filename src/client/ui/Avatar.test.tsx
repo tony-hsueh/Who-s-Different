@@ -57,3 +57,21 @@ describe('Avatar', () => {
     expect(rootOf(container).dataset.pattern).toBe('2');
   });
 });
+
+describe('Avatar artwork', () => {
+  it('draws a different image for each of the patterns, not only a different color', () => {
+    const sources = new Set<string>();
+    for (let index = 0; index < AVATAR_PATTERN_COUNT; index++) {
+      const { container, unmount } = render(
+        <Avatar nickname="甲" color="#e63946" index={index} />,
+      );
+      const image = container.querySelector('img');
+      expect(image, `pattern ${index} has an image`).not.toBeNull();
+      expect(image?.getAttribute('alt')).toBe('');
+      sources.add(image?.getAttribute('src') ?? '');
+      unmount();
+    }
+    expect(AVATAR_PATTERN_COUNT).toBe(15);
+    expect(sources.size).toBe(15);
+  });
+});

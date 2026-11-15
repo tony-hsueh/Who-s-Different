@@ -15,14 +15,14 @@
   height: var(--avatar-size, 3.5rem);
   border-radius: var(--radius-full);
   background: var(--avatar-color, var(--color-primary));
-  color: #fff;
   box-shadow: var(--shadow-card);
 }
 
-.wd-avatar__badge svg {
-  width: 62%;
-  height: 62%;
-  fill: currentcolor;
+.wd-avatar__badge img {
+  width: 84%;
+  height: 84%;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .wd-avatar__name {
@@ -33,14 +33,15 @@
 .wd-avatar__tag {
   padding: 0 var(--space-2);
   border-radius: var(--radius-full);
-  background: var(--color-ink);
-  color: #fff;
+  background: var(--color-tag);
+  color: var(--color-tag-ink);
   font-size: calc(var(--fs-small, 0.875rem) * 0.85);
   line-height: 1.6;
 }
 
 .wd-avatar__tag[data-tag='eliminated'] {
   background: var(--color-danger);
+  color: var(--color-danger-ink);
 }
 
 .wd-avatar[data-offline='true'] .wd-avatar__badge {

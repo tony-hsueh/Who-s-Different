@@ -413,10 +413,16 @@ test('the finished screen shows the result, then a reset returns to waiting', as
     playerId: minority.playerId,
   });
 
+  await expect(page.getByText('平民獲勝')).toBeVisible();
   await expect(page.getByText('請看大螢幕')).toBeVisible();
   const words = page.locator('.wd-words');
   await expect(words).toContainText(majorityWord);
   await expect(words).toContainText(minority.word ?? '');
+  await expect(
+    page.getByText(
+      minority.playerId === mine.playerId ? '你是臥底' : '你是平民',
+    ),
+  ).toBeVisible();
   await shot(page, 'finished');
 
   await room.host.call('game:reset', {});

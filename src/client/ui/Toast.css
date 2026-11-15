@@ -16,8 +16,8 @@
   max-width: min(32rem, 100%);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
-  background: var(--color-ink);
-  color: #fff;
+  background: var(--color-tag);
+  color: var(--color-tag-ink);
   font-size: var(--fs-small, 0.875rem);
   box-shadow: var(--shadow-card);
   pointer-events: auto;
@@ -26,6 +26,7 @@
 
 .wd-toast[data-tone='error'] {
   background: var(--color-danger);
+  color: var(--color-danger-ink);
 }
 
 .wd-toast__close {

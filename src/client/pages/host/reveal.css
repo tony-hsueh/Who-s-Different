@@ -1,6 +1,6 @@
 .host-reveal {
   --reveal-color: var(--color-danger);
-  --reveal-tint: #fde8ea;
+  --reveal-tint: var(--color-danger-tint);
   --avatar-size: 7rem;
   --fs-small: 1.75rem;
 
@@ -18,8 +18,8 @@
 }
 
 .host-reveal[data-outcome='caught'] {
-  --reveal-color: #1d8a4a;
-  --reveal-tint: #e3f6ea;
+  --reveal-color: var(--color-success);
+  --reveal-tint: var(--color-success-tint);
 }
 
 .host-reveal__icon {

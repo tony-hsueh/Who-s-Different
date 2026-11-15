@@ -419,10 +419,12 @@ describe('finished', () => {
 
   it('shows the winner, both words, own side and the big-screen hint', () => {
     openFinished();
-    expect(screen.getByText('多數方獲勝')).toBeDefined();
+    expect(screen.getByText('平民獲勝')).toBeDefined();
+    expect(screen.getByText('平民詞語')).toBeDefined();
+    expect(screen.getByText('臥底詞語')).toBeDefined();
     expect(screen.getByText('蘋果')).toBeDefined();
     expect(screen.getByText('水梨')).toBeDefined();
-    expect(screen.getByText('你是少數方')).toBeDefined();
+    expect(screen.getByText('你是臥底')).toBeDefined();
     expect(screen.getByText('請看大螢幕')).toBeDefined();
   });
 

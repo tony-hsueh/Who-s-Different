@@ -9,11 +9,13 @@
   "scripts": {
     "dev": "concurrently -k -n server,client -c blue,green \"tsx watch src/server/index.ts\" \"vite\"",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "build": "npm run clean && vite build && tsc -p tsconfig.server.json",
+    "build": "npm run clean && vite build && tsc -p tsconfig.server.json && node -e \"require('node:fs').cpSync('src/server/log/schema.sql','dist/server/server/log/schema.sql')\"",
     "start": "node dist/server/server/index.js",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json && tsc -p tsconfig.node.json",
+    "logs": "tsx scripts/logs.ts",
+    "logs:cleanup": "tsx scripts/logs.ts --cleanup",
     "test": "vitest run",
     "test:e2e": "playwright test"
   },

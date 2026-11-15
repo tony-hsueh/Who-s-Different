@@ -30,6 +30,7 @@ async function logged() {
   server = await startServer({
     logger: createSqliteLogger(db),
     admin: { db, token: 'admin-token' },
+    rateLimit: { maxRequests: 1000, windowMs: 1000 },
   });
 }
 

@@ -1,9 +1,5 @@
-import type { PublicGameResult, Role } from '../../../shared';
-
-const ROLE_NAMES: Record<Role, string> = {
-  majority: '多數方',
-  minority: '少數方',
-};
+import type { PublicGameResult } from '../../../shared';
+import { ROLE_LABEL } from '../../lib/role-labels';
 
 export interface PlayerFinishedProps {
   playerId: string;
@@ -18,18 +14,18 @@ export function PlayerFinished({ playerId, result }: PlayerFinishedProps) {
       <h1>遊戲結束</h1>
       {result && (
         <>
-          <p className="wd-player__lead">{ROLE_NAMES[result.winner]}獲勝</p>
+          <p className="wd-player__lead">{ROLE_LABEL[result.winner]}獲勝</p>
           <dl className="wd-words">
             <div>
-              <dt>多數詞</dt>
+              <dt>平民詞語</dt>
               <dd>{result.majorityWord}</dd>
             </div>
             <div>
-              <dt>少數詞</dt>
+              <dt>臥底詞語</dt>
               <dd>{result.minorityWord}</dd>
             </div>
           </dl>
-          {myRole && <p>你是{ROLE_NAMES[myRole]}</p>}
+          {myRole && <p>你是{ROLE_LABEL[myRole]}</p>}
         </>
       )}
       <p className="wd-player__lead">請看大螢幕</p>

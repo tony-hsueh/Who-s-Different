@@ -202,7 +202,7 @@ test('double-clicking confirm sends one elimination, then the screen moves on', 
 
   await avatar(page, '玩家2').click();
   await dialog(page).getByRole('button', { name: '確認淘汰' }).dblclick();
-  await expect(page.getByRole('heading', { name: '淘汰揭曉' })).toBeVisible();
+  await expect(page.locator('.host-reveal')).toBeVisible();
   await page.waitForTimeout(300);
 
   const eliminations = sent.filter((s) => s.includes('game:eliminate'));
@@ -220,27 +220,12 @@ test('an eliminated avatar cannot be clicked or focused in the next round', asyn
   page,
   baseURL,
 }) => {
-  const { roomId } = await startGame(page, baseURL!, 7).then(async (game) => {
-    await avatar(page, '玩家2').click();
-    await dialog(page).getByRole('button', { name: '確認淘汰' }).click();
-    await expect(page.getByRole('heading', { name: '淘汰揭曉' })).toBeVisible();
-    return game;
-  });
+  await startGame(page, baseURL!, 7);
+  await avatar(page, '玩家2').click();
+  await dialog(page).getByRole('button', { name: '確認淘汰' }).click();
+  await expect(page.locator('.host-reveal')).toBeVisible();
 
-  // The reveal and next-round screens are PR-12; a second host connection moves the room on.
-  const token = await page.evaluate(
-    (id) => localStorage.getItem(`wd:host:${id}`) ?? '',
-    roomId,
-  );
-  expect(token).not.toBe('');
-  const hostSocket = io(baseURL!, { transports: ['websocket'] });
-  sockets.push(hostSocket);
-  const auth = await hostSocket.emitWithAck('host:auth', {
-    hostToken: token,
-  });
-  expect(auth.ok).toBe(true);
-  expect((await hostSocket.emitWithAck('game:next-round', {})).ok).toBe(true);
-
+  await page.getByRole('button', { name: '下一輪' }).click();
   await expect(page.getByRole('heading', { name: 'Round 2' })).toBeVisible();
   const out = avatar(page, '玩家2');
   await expect(out).toBeDisabled();
@@ -283,7 +268,12 @@ test('the host page never receives secret words or roles of living players', asy
     expect(frames, `${label}: frames carry a secret field`).not.toContain(
       'secretWord',
     );
-    expect(dom).not.toMatch(/陣營|臥底|平民/);
+    // The reveal title names the eliminated player's side, and nothing else may name one.
+    const withoutRevealCopy = dom.replace(
+      /<(?:h1|p) class="host-reveal__(?:title|subtitle)">[^<]*<[/](?:h1|p)>/g,
+      '',
+    );
+    expect(withoutRevealCopy).not.toMatch(/陣營|臥底|平民/);
   };
 
   await checkHost('playing');
@@ -298,7 +288,7 @@ test('the host page never receives secret words or roles of living players', asy
   // Roles are public only for the player who was just eliminated, never for the living.
   await avatar(page, '玩家2').click();
   await dialog(page).getByRole('button', { name: '確認淘汰' }).click();
-  await expect(page.getByRole('heading', { name: '淘汰揭曉' })).toBeVisible();
+  await expect(page.locator('.host-reveal')).toBeVisible();
   await checkHost('after elimination');
   const eliminatedId = phones[1]!.playerId;
   const livingRoleLeaks = traffic.flatMap((frame) => {

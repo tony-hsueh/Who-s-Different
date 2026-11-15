@@ -1,17 +1,17 @@
 .host-reveal {
   --reveal-color: var(--color-danger);
   --reveal-tint: #fde8ea;
-  --avatar-size: 9rem;
-  --fs-small: 2rem;
+  --avatar-size: 7rem;
+  --fs-small: 1.75rem;
 
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
   min-height: 100dvh;
-  padding: var(--space-6);
+  padding: var(--space-5);
   overflow: hidden;
   background: var(--reveal-tint);
   text-align: center;
@@ -23,13 +23,17 @@
 }
 
 .host-reveal__icon {
-  width: 9rem;
-  height: 9rem;
+  width: 7rem;
+  height: 7rem;
   fill: var(--reveal-color);
   stroke: #fff;
   stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.host-reveal__icon circle {
+  stroke: none;
 }
 
 .host-reveal__title {
@@ -46,7 +50,7 @@
 }
 
 .host-reveal__who {
-  margin: var(--space-4) 0;
+  margin: var(--space-3) 0;
 }
 
 .host-reveal__confetti {

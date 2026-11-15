@@ -1,0 +1,9 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Avatar > eliminated and offline: shows both overlays 1`] = `"<div class="wd-avatar" data-pattern="3" data-offline="true" data-eliminated="true" style="--avatar-color: #e63946;"><div class="wd-avatar__badge" role="img" aria-label="小明，已淘汰，離線"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 20 12 12 20 4 12Z"></path></svg></div><span class="wd-avatar__name">小明</span><span class="wd-avatar__tag" data-tag="eliminated">已淘汰</span><span class="wd-avatar__tag">離線</span></div>"`;
+
+exports[`Avatar > eliminated: marks the avatar and says so in text 1`] = `"<div class="wd-avatar" data-pattern="3" data-eliminated="true" style="--avatar-color: #e63946;"><div class="wd-avatar__badge" role="img" aria-label="小明，已淘汰"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 20 12 12 20 4 12Z"></path></svg></div><span class="wd-avatar__name">小明</span><span class="wd-avatar__tag" data-tag="eliminated">已淘汰</span></div>"`;
+
+exports[`Avatar > offline: marks the avatar and says so in text 1`] = `"<div class="wd-avatar" data-pattern="3" data-offline="true" style="--avatar-color: #e63946;"><div class="wd-avatar__badge" role="img" aria-label="小明，離線"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 20 12 12 20 4 12Z"></path></svg></div><span class="wd-avatar__name">小明</span><span class="wd-avatar__tag">離線</span></div>"`;
+
+exports[`Avatar > online: shows nickname, color and pattern with no overlay 1`] = `"<div class="wd-avatar" data-pattern="3" style="--avatar-color: #e63946;"><div class="wd-avatar__badge" role="img" aria-label="小明"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4 20 12 12 20 4 12Z"></path></svg></div><span class="wd-avatar__name">小明</span></div>"`;

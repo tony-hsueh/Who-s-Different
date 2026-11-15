@@ -131,3 +131,23 @@
 - **CLI。** `npm run logs -- --game <id>`、`--room <id>`、`--private`（可再加 `--game <id>` 只看一場）。`npm run logs:cleanup` 等於 `--cleanup`。路徑同樣讀 `LOG_DB_PATH`。`scripts/` 加進 `tsconfig.node.json` 與 ESLint 的 Node 範圍。
 - **清理。** 刪除 30 天以前（嚴格早於 `now - 30 天`）的事件、私有紀錄，以及開始時間在 30 天以前的 `games` 列。Server 啟動時先跑一次，之後每 24 小時一次，計時器 `unref()`。時鐘可注入，測試用假時鐘與假計時器。清理失敗只印到 stderr，不影響服務。
 - **Server 重啟。** 事件只進 SQLite 檔，測試把資料庫關掉再開同一個檔，確認仍查得到。遊戲狀態本身仍只在記憶體，重啟後房間照舊失效。
+
+## PR-08 前端基礎
+
+票上沒寫清楚的地方，我這樣選。
+
+- **路由用 React Router 7（`react-router`）的 data router。** 最新的 8.x 要求 Node 22 以上，和前面幾個套件一樣，先選仍支援 Node 20 的版本。 `createBrowserRouter`，路由表 `routes` 另外匯出，測試用 `createMemoryRouter` 直接套同一份。每條路由用 `handle.mode` 標示字級（`projector` 或 `phone`），共用版面讀它，設到外層 `data-mode`。首頁與主持人畫面是投影模式，玩家畫面與 404 是手機模式。
+- **連線狀態放在一個 `ConnectionStore`，不是散在 hook 裡。** 它是普通類別，用 `useSyncExternalStore` 訂閱。這樣 Socket 只有一個，重連、驗證、狀態都在同一處，測試只要換成假的 Socket。Socket 用 `autoConnect: false`，由 Provider 啟動，React StrictMode 重複掛載也不會留下多條連線。
+- **自動重連用 Socket.IO 內建的指數退避。** 500 毫秒起跳，上限 10 秒，不限次數。
+- **畫面用 `useHostSession(roomId)` 或 `usePlayerSession(roomCode)` 綁定身分。** 綁定後，每次連上（含重連）都會讀 localStorage 的 Token 呼叫 `host:auth` 或 `player:auth`。連線狀態 `status` 有六種：`idle`、`connecting`、`authenticating`、`ready`、`no-token`、`invalid`。`useRoomState()`、`usePlayerState()` 讀最新狀態，`useRequest()` 送請求並在失敗時跳出中文 toast，`silent` 可自己處理錯誤。PR-10 加入成功後要先 `savePlayerToken`，再呼叫 `reauth()` 拿私人狀態。
+- **驗證錯誤的處理。** `ALREADY_AUTHENTICATED` 當成功，不跳 toast。`ROOM_NOT_FOUND` 與 `room:closed` 清掉 Token、進 `invalid`，顯示「房間已失效」。`INVALID_TOKEN`、`TOKEN_EXPIRED` 清掉 Token、進 `no-token`，也會跳 toast，讓玩家知道為什麼被請回加入畫面。其他錯誤跳 toast、Token 留著，下次重連再試。`room:closed` 只處理自己的房間：主持人比對網址的 `roomId`，玩家比對已收到的房間狀態。
+- **主持人沒有 Token 時也顯示「房間已失效」。** 沒有 Token 這個瀏覽器就沒辦法主持，也沒有別的路可走。玩家沒有 Token 則留在玩家畫面，PR-10 在這裡放加入表單。
+- **請求的邊界。** 沒連線時直接回 `INTERNAL_ERROR`，不交給 Socket.IO 暫存，不然它會在重連後、驗證之前先把請求送出去。10 秒沒回、或連線中斷，同樣回 `INTERNAL_ERROR`；中斷時還會清空 Socket.IO 的暫存區，因為心跳逾時但還沒斷線的那段時間，它也會暫存。任何請求收到 `ROOM_NOT_FOUND`，且發出時的身分和現在相同，就當成房間失效。
+- **換身分就重新連線。** Server 把一條連線綁給一個身分（PR-05），所以只要已經送出過驗證，離開房間或換到別的房間時，就斷線再連，不然新房間的驗證會回 `ALREADY_AUTHENTICATED`，卻還綁在舊房間。房間失效（`invalid`）之後，重連不會重新驗證，直到換身分為止。
+- **Token 在 localStorage 被擋時改放記憶體。** 這一次載入內仍可遊玩（包含斷線重連），重新整理後就沒了，符合票上寫的行為。只有寫入失敗時才用記憶體，所以平常不會蓋掉 localStorage 的值。玩家 Token 的 key 把房間代碼轉大寫。Token 不放網址，也不寫 console，測試有檢查。
+- **首頁的「建立房間」真的會動。** 票上只寫按鈕，但沒有它首頁沒法使用，也沒辦法驗證主持人路徑。成功後存 Token 並導到 `/host/:roomId`，失敗跳 toast。
+- **CSP 由 `src/server/csp.ts` 的小 middleware 加在所有回應上。** `default-src 'self'`、`script-src 'self'`、`style-src 'self' 'unsafe-inline'`（頭像顏色用 inline style 的 CSS 變數）、`img-src 'self' data:`、`object-src 'none'`、`frame-ancestors 'none'`。`connect-src` 除了 `'self'`，還把這次請求的 `ws://host`、`wss://host` 寫明，因為部分舊版 Safari 的 `'self'` 不含 WebSocket。Host 標頭先用格式檢查，不合格就不加，避免有人塞指令進標頭。不裝 helmet。字型用系統字型，不載入外部資源。
+- **頭像圖案有 15 種，對應 `avatarIndex`。** 超過就取餘數。除了顏色，離線與淘汰都有文字標籤（「離線」「已淘汰」），也寫進 `aria-label`，不靠顏色分辨。
+- **錯誤訊息表用 `Record<ErrorCode, string>`。** 協定新增錯誤碼時沒補訊息，型別檢查會直接失敗。
+- **其他。** `ConfirmDialog` 開啟時焦點在「取消」，避免誤按 Enter 就確認，Escape 等於取消。Toast 5 秒後消失，可手動關閉。`prefers-reduced-motion` 時動畫與轉場幾乎關掉。測試用的假 Socket 放在 `src/client/net/mock-socket.ts`，PR-09 到 PR-12 的元件測試可以直接用。
+- **既有 e2e 改了一條。** 「未知路徑仍會載入 App」改成看到 404 標題，因為現在未知路徑會顯示 404。

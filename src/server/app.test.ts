@@ -70,3 +70,39 @@ describe('static client (production)', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('Content-Security-Policy', () => {
+  it('is set on API and client responses', async () => {
+    const { app } = startApp({
+      clientDir: makeClientDir('<!doctype html><title>spa</title>'),
+    });
+    for (const path of ['/healthz', '/', '/room/ABCD']) {
+      const res = await request(app).get(path).set('Host', '127.0.0.1:3100');
+      const csp = String(res.headers['content-security-policy']);
+      expect(csp, path).toContain("default-src 'self'");
+      expect(csp, path).toContain("script-src 'self'");
+      expect(csp, path).toContain("frame-ancestors 'none'");
+      expect(csp, path).toContain("object-src 'none'");
+    }
+  });
+
+  it('allows websocket connections back to the same host', async () => {
+    const { app } = startApp();
+    const res = await request(app)
+      .get('/healthz')
+      .set('Host', '192.168.1.5:3000');
+    expect(String(res.headers['content-security-policy'])).toContain(
+      "connect-src 'self' ws://192.168.1.5:3000 wss://192.168.1.5:3000",
+    );
+  });
+
+  it('does not let a hostile Host header inject directives', async () => {
+    const { app } = startApp();
+    const res = await request(app)
+      .get('/healthz')
+      .set('Host', 'evil.test; script-src *');
+    const csp = String(res.headers['content-security-policy']);
+    expect(csp).not.toContain('evil.test');
+    expect(csp).toContain("connect-src 'self'");
+  });
+});

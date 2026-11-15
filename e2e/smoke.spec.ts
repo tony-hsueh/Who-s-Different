@@ -10,7 +10,9 @@ test('home page shows the game name', async ({ page }) => {
 
 test('an unknown client route still loads the app', async ({ page }) => {
   await page.goto('/some/route');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(gameName);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    '找不到這個頁面',
+  );
 });
 
 test('GET /healthz answers {ok:true}', async ({ request }) => {

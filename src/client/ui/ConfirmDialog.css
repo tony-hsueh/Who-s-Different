@@ -1,0 +1,31 @@
+.wd-dialog__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--color-overlay);
+}
+
+.wd-dialog {
+  display: grid;
+  gap: var(--space-4);
+  width: min(32rem, 100%);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.wd-dialog h2 {
+  font-size: var(--fs-title);
+  line-height: 1.2;
+}
+
+.wd-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}

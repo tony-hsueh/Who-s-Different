@@ -30,7 +30,7 @@ npm ci && npm run build && npm run start:lan
 
 ### Windows 防火牆
 
-第一次跑要放行連接埠，手機才連得進來。用**系統管理員身分**開 PowerShell，執行：
+第一次跑要放行連接埠，手機才連得進來。下面用預設的 3000，有改 `PORT` 就換成你設的值（`start:lan` 印出來的指令已經帶好連接埠，可以直接複製）。用**系統管理員身分**開 PowerShell，執行：
 
 ```powershell
 netsh advfirewall firewall add rule name="Whos-Different" dir=in action=allow protocol=TCP localport=3000
@@ -61,7 +61,7 @@ netsh advfirewall firewall delete rule name="Whos-Different"
 
 1. 手機和筆電是不是同一個 Wi-Fi。有些公司 Wi-Fi 有分訪客網路和內部網路，要連到同一個。
 2. 防火牆規則有沒有加（上面那段）。
-3. 手機瀏覽器直接打開 `http://<IP>:3000/healthz`，看到 `{"ok":true}` 代表網路是通的。
+3. 手機瀏覽器直接打開 `http://<IP>:3000/healthz`（連接埠換成你設的），看到 `{"ok":true}` 代表網路是通的。
 4. 公司 Wi-Fi 常開「用戶端隔離」，手機之間、手機和筆電不能互連，上面三項都對也連不上。這時改用隧道，讓手機走網際網路連進來，做法見 [deployment.md 的「用隧道」](deployment.md#用隧道不能直連區網時)。也可以用筆電開手機熱點，讓大家連它。
 
 ### 玩完

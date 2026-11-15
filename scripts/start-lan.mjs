@@ -26,6 +26,7 @@ const { port, publicBaseUrl, adminToken, generatedToken } = lanEnv(
   address,
   () => randomBytes(24).toString('base64url'),
 );
+process.env.PORT = String(port);
 process.env.PUBLIC_BASE_URL = publicBaseUrl;
 process.env.ADMIN_TOKEN = adminToken;
 

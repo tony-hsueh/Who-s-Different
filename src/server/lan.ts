@@ -7,7 +7,7 @@ export interface LanCandidate {
 
 // Adapters that belong to a VM, container or VPN. A phone on the Wi-Fi cannot reach them.
 const VIRTUAL_NAME =
-  /vethernet|virtualbox|vmware|vmnet|hyper-v|wsl|docker|veth|br-|vbox|tailscale|zerotier|loopback|utun|tun\d|tap\d/i;
+  /vethernet|virtualbox|vmware|vmnet|hyper-v|wsl|docker|veth|br-|vbox|virbr|lxcbr|lxdbr|podman|cni|flannel|kube|tailscale|zerotier|loopback|utun|tun\d|tap\d/i;
 
 function privateRank(address: string): number {
   const [a = 0, b = 0] = address.split('.').map(Number);

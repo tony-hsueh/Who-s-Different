@@ -67,6 +67,15 @@ describe('listLanCandidates', () => {
     expect(found[0]?.address).toBe('172.16.0.1');
   });
 
+  it('puts Linux virtual bridges behind the real adapter', () => {
+    const found = listLanCandidates({
+      virbr0: [nic('192.168.122.1')],
+      lxcbr0: [nic('10.0.3.1')],
+      wlp3s0: [nic('10.0.0.7')],
+    });
+    expect(found[0]?.name).toBe('wlp3s0');
+  });
+
   it('puts virtual adapters last even when their address ranks higher', () => {
     const found = listLanCandidates({
       'vEthernet (WSL)': [nic('172.24.48.1')],
@@ -134,6 +143,10 @@ describe('lanEnv', () => {
       adminToken: 'mine',
       generatedToken: false,
     });
+  });
+
+  it('falls back to 3000 when PORT is empty', () => {
+    expect(lanEnv({ PORT: '' }, '10.0.0.7', token).port).toBe(3000);
   });
 
   it('treats empty values as unset', () => {

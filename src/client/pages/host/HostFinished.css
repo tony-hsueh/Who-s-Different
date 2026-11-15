@@ -1,0 +1,100 @@
+.host-finished {
+  --avatar-size: 5rem;
+  --fs-small: 1.25rem;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 100dvh;
+  padding: var(--space-5) var(--space-6);
+  text-align: center;
+}
+
+.host-finished__winner {
+  color: var(--color-primary);
+  font-size: calc(var(--fs-display) * 1.5);
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.host-finished__words {
+  display: flex;
+  gap: var(--space-6);
+  margin: 0;
+}
+
+.host-finished__words > div {
+  min-width: 14rem;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.host-finished__words dt {
+  color: var(--color-ink-soft);
+  font-size: var(--fs-small);
+}
+
+.host-finished__words dd {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 900;
+}
+
+.host-finished__body {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+  align-self: stretch;
+}
+
+.host-finished__roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.host-finished__roster li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.host-finished__role {
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.host-finished__roster li[data-role='minority'] .host-finished__role {
+  background: var(--color-danger);
+}
+
+.host-finished__log {
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  text-align: start;
+}
+
+.host-finished__log h2 {
+  font-size: var(--fs-title);
+}
+
+.host-finished__log ol {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  font-size: var(--fs-small);
+  list-style: none;
+}

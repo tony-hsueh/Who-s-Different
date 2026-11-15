@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { PublicPlayer } from '../../../shared';
 import { useAutoHide } from '../../hooks/useAutoHide';
 import { Avatar } from '../../ui/Avatar';
@@ -9,6 +9,8 @@ export interface SecretCardProps {
   roundNumber: number;
   eliminated: boolean;
   word: string;
+  // Shown under the title, e.g. the result of a reveal.
+  notice?: ReactNode;
 }
 
 // The word is rendered only while revealed, so a hidden card leaves nothing in the DOM to
@@ -18,6 +20,7 @@ export function SecretCard({
   roundNumber,
   eliminated,
   word,
+  notice,
 }: SecretCardProps) {
   const [revealed, setRevealed] = useState(false);
   const { backgrounded } = useAutoHide(() => setRevealed(false));
@@ -29,6 +32,7 @@ export function SecretCard({
       data-backgrounded={backgrounded || undefined}
     >
       <h1>誰跟我不一樣？</h1>
+      {notice}
       <Avatar
         nickname={self.nickname}
         color={self.avatarColor}

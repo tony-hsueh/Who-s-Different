@@ -12,6 +12,7 @@ import { FullscreenMessage } from '../../ui/FullscreenMessage';
 import { RoomInvalid } from '../RoomInvalid';
 import { JoinForm } from './JoinForm';
 import { PlayerFinished } from './PlayerFinished';
+import { PlayerReveal } from './PlayerReveal';
 import { SecretCard } from './SecretCard';
 import { Waiting } from './Waiting';
 import './player.css';
@@ -65,7 +66,7 @@ export function PlayerPage() {
       return <PlayerFinished playerId={mine.playerId} result={room.result} />;
     case 'playing':
     case 'reveal':
-      // PR-12 adds the reveal screen; until then the card stays up.
+      // Both phases render the same card element, so a word being read survives the round change.
       return mine.secretWord === null ? (
         <FullscreenMessage title="連線中…" />
       ) : (
@@ -74,6 +75,11 @@ export function PlayerPage() {
           roundNumber={mine.roundNumber}
           eliminated={mine.eliminated}
           word={mine.secretWord}
+          notice={
+            mine.phase === 'reveal' && (
+              <PlayerReveal playerId={mine.playerId} room={room} />
+            )
+          }
         />
       );
   }

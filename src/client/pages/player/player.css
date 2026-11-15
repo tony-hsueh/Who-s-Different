@@ -134,3 +134,25 @@
   background: var(--color-overlay);
   pointer-events: none;
 }
+
+.wd-reveal {
+  width: 100%;
+  max-width: 24rem;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.wd-reveal[data-role='minority'] {
+  box-shadow: inset 0 0 0 3px #1d8a4a;
+}
+
+.wd-reveal[data-role='majority'] {
+  box-shadow: inset 0 0 0 3px var(--color-danger);
+}
+
+.wd-reveal__result {
+  font-size: calc(var(--fs-body) * 1.15);
+  font-weight: 700;
+}

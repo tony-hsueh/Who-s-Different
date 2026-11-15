@@ -8,7 +8,12 @@ import type {
 } from '../../shared/protocol.js';
 import type { Binding, SocketData } from '../auth.js';
 import type { AppServer } from '../broadcast.js';
-import type { EventLogger, LogEvent } from '../log/noop-logger.js';
+import type {
+  EventLogger,
+  LogEvent,
+  PrivateGameRecord,
+} from '../log/noop-logger.js';
+import type { PresenceService } from '../presence-sync.js';
 import type { RateLimiter } from '../rate-limit.js';
 import type { RoomStore } from '../rooms/room-store.js';
 import { schemas } from './validate.js';
@@ -25,6 +30,7 @@ export type HandlerEnv = {
   socket: AppSocket;
   store: RoomStore;
   logger: EventLogger;
+  presence: PresenceService;
   limiter: RateLimiter;
 };
 
@@ -33,6 +39,33 @@ export function logSafely(logger: EventLogger, event: LogEvent): void {
     logger.logEvent(event);
   } catch (error) {
     console.error('event logger failed', error);
+  }
+}
+
+// Who sent the request and which game it belongs to, so failures show up in
+// the per-game log.
+function caller(
+  env: HandlerEnv,
+): Pick<LogEvent, 'roomId' | 'gameId' | 'roundNumber' | 'playerId'> {
+  const binding = env.socket.data.binding;
+  if (!binding) return {};
+  const game = env.store.getRoom(binding.roomId)?.game;
+  return {
+    roomId: binding.roomId,
+    gameId: game?.gameId,
+    roundNumber: game?.roundNumber,
+    playerId: binding.kind === 'player' ? binding.playerId : undefined,
+  };
+}
+
+export function recordPrivate(
+  logger: EventLogger,
+  record: PrivateGameRecord,
+): void {
+  try {
+    logger.recordPrivateGame?.(record);
+  } catch (error) {
+    console.error('private game record failed', error);
   }
 }
 
@@ -72,17 +105,23 @@ export function handle<E extends keyof Requests>(
           result = run(parsed.data, env.socket.data.binding);
         } catch (error) {
           console.error(`handler for ${event} failed`, error);
+          logSafely(env.logger, {
+            type: 'SERVER_ERROR',
+            ...caller(env),
+            payload: {
+              event,
+              error: error instanceof Error ? error.name : 'unknown',
+            },
+          });
           result = failure('INTERNAL_ERROR', 'Something went wrong');
         }
       }
     }
 
     if (!result.ok) {
-      const binding = env.socket.data.binding;
       logSafely(env.logger, {
         type: 'OPERATION_REJECTED',
-        roomId: binding?.roomId,
-        playerId: binding?.kind === 'player' ? binding.playerId : undefined,
+        ...caller(env),
         payload: { event, code: result.code },
       });
     }

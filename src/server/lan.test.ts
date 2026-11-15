@@ -76,6 +76,15 @@ describe('listLanCandidates', () => {
     expect(found[0]?.name).toBe('wlp3s0');
   });
 
+  it('puts VPN interfaces behind the real adapter', () => {
+    const found = listLanCandidates({
+      wg0: [nic('10.8.0.2')],
+      tailscale0: [nic('100.64.0.5')],
+      wlp3s0: [nic('172.20.0.7')],
+    });
+    expect(found[0]?.name).toBe('wlp3s0');
+  });
+
   it('puts virtual adapters last even when their address ranks higher', () => {
     const found = listLanCandidates({
       'vEthernet (WSL)': [nic('172.24.48.1')],

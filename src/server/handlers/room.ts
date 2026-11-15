@@ -87,6 +87,9 @@ export function registerRoomHandlers(env: HandlerEnv): void {
   handle(env, 'room:leave', (_payload, binding) => {
     const caller = requirePlayer(binding);
     if (!caller.ok) return caller;
+    if (!store.getRoom(caller.roomId)) {
+      return fail('ROOM_NOT_FOUND', 'The room no longer exists');
+    }
     const left = store.leaveRoom(caller.playerId);
     if (!left.ok) return left;
     unbind(socket);

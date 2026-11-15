@@ -154,6 +154,19 @@ describe('expired rooms', () => {
     });
   });
 
+  it('answers ROOM_NOT_FOUND to a player who leaves a swept room', async () => {
+    server = await startServer({ sweepIntervalMs: 10 });
+    const { players, roomId } = await openLobby(server, 4);
+    server.clock.advance(ROOM_IDLE_TTL_MS + 1);
+    await vi.waitFor(() => {
+      expect(server.store.getRoom(roomId)).toBeUndefined();
+    });
+    expect(await players[0]?.client.call('room:leave', {})).toMatchObject({
+      ok: false,
+      code: 'ROOM_NOT_FOUND',
+    });
+  });
+
   it('does not close rooms that are still active', async () => {
     server = await startServer({ sweepIntervalMs: 10 });
     const { host, roomId } = await openLobby(server, 4);

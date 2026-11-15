@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppProviders } from './AppProviders';
@@ -134,7 +134,7 @@ describe('with localStorage disabled', () => {
     expect(screen.getByRole('button', { name: '建立房間' })).toBeDefined();
     home.unmount();
     const player = renderAt('/room/ABCD');
-    socket.serverConnect();
+    act(() => socket.serverConnect());
     expect(screen.getByLabelText('暱稱')).toBeDefined();
     player.unmount();
   });

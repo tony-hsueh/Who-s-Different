@@ -1,0 +1,136 @@
+.wd-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 100dvh;
+  padding: var(--space-5) var(--space-4);
+  text-align: center;
+}
+
+.wd-player > .wd-btn {
+  width: 100%;
+  max-width: 24rem;
+}
+
+.wd-player__room {
+  color: var(--color-ink-soft);
+}
+
+.wd-player__lead {
+  font-size: calc(var(--fs-body) * 1.25);
+  font-weight: 700;
+}
+
+.wd-join {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 24rem;
+  text-align: start;
+}
+
+.wd-join label {
+  font-weight: 700;
+}
+
+.wd-join__input {
+  min-height: var(--btn-height);
+  padding: 0 var(--space-4);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  /* 16px or larger keeps iOS Safari from zooming the page when the field is focused. */
+  font: inherit;
+  font-size: max(1rem, var(--fs-body));
+}
+
+.wd-join__input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.wd-join__error {
+  color: var(--color-danger);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.wd-words {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  margin: 0;
+}
+
+.wd-words div {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.wd-words dt {
+  color: var(--color-ink-soft);
+  font-size: var(--fs-small);
+}
+
+.wd-words dd {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 700;
+}
+
+.wd-secret {
+  position: relative;
+}
+
+.wd-secret__status[data-eliminated='true'] {
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
+.wd-secret__panel {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 24rem;
+  min-height: 10rem;
+  padding: var(--space-4);
+  border: 3px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  /* A long press must not select the word where someone else could see it. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: pointer;
+}
+
+.wd-secret__hint {
+  color: var(--color-ink-soft);
+}
+
+.wd-secret__word {
+  font-size: var(--fs-display);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.wd-secret__shield {
+  display: none;
+}
+
+/* Best effort: a blurred card makes the app-switcher thumbnail harder to read. */
+.wd-secret[data-backgrounded] > :not(.wd-secret__shield) {
+  filter: blur(14px);
+}
+
+.wd-secret[data-backgrounded] .wd-secret__shield {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: var(--color-overlay);
+  pointer-events: none;
+}

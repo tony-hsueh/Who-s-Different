@@ -130,9 +130,12 @@ export class ConnectionStore {
     }
   };
 
+  // `roomMayBeMissing` is for requests where ROOM_NOT_FOUND is an answer the caller shows
+  // itself (a join to a mistyped code), not proof that the page's room is gone.
   request<E extends keyof Requests>(
     event: E,
     payload: Requests[E]['payload'],
+    options?: { roomMayBeMissing?: boolean },
   ): Promise<Ack<Requests[E]['data']>> {
     return new Promise((resolve) => {
       // Socket.IO would buffer this and send it before the reconnect handler can authenticate.
@@ -155,6 +158,7 @@ export class ConnectionStore {
         // The answer may belong to a room the page has already left.
         if (
           !ack.ok &&
+          !options?.roomMayBeMissing &&
           ack.code === 'ROOM_NOT_FOUND' &&
           identity &&
           sameIdentity(identity, this.identity)

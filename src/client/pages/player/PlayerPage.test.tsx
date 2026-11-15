@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
+  Ack,
   ErrorCode,
   GamePhase,
   PlayerPrivateState,
@@ -73,12 +74,16 @@ function renderAt(path = '/room/ABCD') {
 function openAs(state: PublicRoomState, privateState: PlayerPrivateState) {
   savePlayerToken('ABCD', 'pt');
   const view = renderAt();
-  socket.serverConnect();
-  socket.answer('player:auth', {
+  act(() => socket.serverConnect());
+  answer('player:auth', {
     ok: true,
     data: { state, privateState },
   });
   return view;
+}
+
+function answer(event: string, response: Ack<unknown>) {
+  act(() => socket.answer(event, response));
 }
 
 function fail(code: ErrorCode) {
@@ -97,7 +102,7 @@ afterEach(() => {
 describe('join form', () => {
   function openForm() {
     const view = renderAt();
-    socket.serverConnect();
+    act(() => socket.serverConnect());
     return view;
   }
 
@@ -127,7 +132,7 @@ describe('join form', () => {
   it('saves the token, authenticates, and shows the waiting screen on success', async () => {
     openForm();
     submit('小明');
-    socket.answer('room:join', {
+    answer('room:join', {
       ok: true,
       data: { playerId: 'p1', sessionToken: 'fresh' },
     });
@@ -136,7 +141,7 @@ describe('join form', () => {
     expect(socket.requestsFor('player:auth')[0]?.payload).toStrictEqual({
       sessionToken: 'fresh',
     });
-    socket.answer('player:auth', {
+    answer('player:auth', {
       ok: true,
       data: { state: room(), privateState: mine() },
     });
@@ -155,7 +160,7 @@ describe('join form', () => {
   it.each(cases)('shows the %s message under the field', async (code) => {
     openForm();
     submit('小明');
-    socket.answer('room:join', fail(code));
+    answer('room:join', fail(code));
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toBe(ERROR_MESSAGES[code]);
     expect(screen.getByLabelText('暱稱').getAttribute('aria-invalid')).toBe(
@@ -169,7 +174,7 @@ describe('join form', () => {
   it('clears the message when the player edits the nickname', async () => {
     openForm();
     submit('小明');
-    socket.answer('room:join', fail('NICKNAME_TAKEN'));
+    answer('room:join', fail('NICKNAME_TAKEN'));
     await screen.findByRole('alert');
     fireEvent.change(screen.getByLabelText('暱稱'), {
       target: { value: '小明2' },
@@ -200,8 +205,8 @@ describe('returning player', () => {
   it('shows 房間已失效 when the room is gone', async () => {
     savePlayerToken('ABCD', 'pt');
     renderAt();
-    socket.serverConnect();
-    socket.answer('player:auth', fail('ROOM_NOT_FOUND'));
+    act(() => socket.serverConnect());
+    answer('player:auth', fail('ROOM_NOT_FOUND'));
     expect(
       await screen.findByRole('heading', { name: '房間已失效' }),
     ).toBeDefined();
@@ -242,7 +247,7 @@ describe('waiting', () => {
     expect(socket.requestsFor('room:leave')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: '確定' }));
     expect(socket.requestsFor('room:leave')).toHaveLength(1);
-    socket.answer('room:leave', { ok: true, data: null });
+    answer('room:leave', { ok: true, data: null });
     await vi.waitFor(() => expect(router.state.location.pathname).toBe('/'));
     expect(readPlayerToken('ABCD')).toBeNull();
   });
@@ -259,7 +264,7 @@ describe('waiting', () => {
     openAs(room(), mine());
     fireEvent.click(screen.getByRole('button', { name: '離開房間' }));
     fireEvent.click(screen.getByRole('button', { name: '確定' }));
-    socket.answer('room:leave', fail('INVALID_PHASE'));
+    answer('room:leave', fail('INVALID_PHASE'));
     expect(await screen.findByText(ERROR_MESSAGES.INVALID_PHASE)).toBeDefined();
     expect(router.state.location.pathname).toBe('/room/ABCD');
     expect(readPlayerToken('ABCD')).toBe('pt');
@@ -345,7 +350,7 @@ describe('secret card', () => {
     act(() => socket.serverDisconnect());
     expect(container.textContent).not.toContain('蘋果');
     act(() => socket.serverConnect());
-    socket.answer('player:auth', {
+    answer('player:auth', {
       ok: true,
       data: { state: playingRoom(), privateState: playing() },
     });

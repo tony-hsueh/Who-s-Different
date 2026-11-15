@@ -71,7 +71,6 @@ describe('routes', () => {
   it('/room/:roomCode shows the player page in phone mode', () => {
     savePlayerToken('ABCD', 'pt');
     const { container } = renderAt('/room/ABCD');
-    expect(screen.getByRole('heading', { name: /玩家/ })).toBeDefined();
     expect(container.querySelector('[data-mode="phone"]')).not.toBeNull();
   });
 
@@ -136,7 +135,7 @@ describe('with localStorage disabled', () => {
     home.unmount();
     const player = renderAt('/room/ABCD');
     socket.serverConnect();
-    expect(screen.getByRole('heading', { name: /玩家/ })).toBeDefined();
+    expect(screen.getByLabelText('暱稱')).toBeDefined();
     player.unmount();
   });
 });

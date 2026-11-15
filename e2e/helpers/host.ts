@@ -97,7 +97,8 @@ export function roleKeyPaths(value: unknown, path = ''): string[] {
 
 // The public room state the host receives lists every player with an id and a nickname.
 export function playerIdOf(frames: Frames, nickname: string): string {
-  for (const frame of frames.all) {
+  const packets = frames.all.flatMap((frame) => frame.split(''));
+  for (const frame of packets) {
     const json = JSON.stringify(packetJson(frame) ?? null);
     const match = new RegExp(
       `"playerId":"([^"]+)"[^{}]*"nickname":"${nickname}"|"nickname":"${nickname}"[^{}]*"playerId":"([^"]+)"`,

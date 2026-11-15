@@ -27,6 +27,7 @@ export interface CreateAppOptions {
   now?: () => number;
   sweepIntervalMs?: number;
   rateLimit?: RateLimitOptions;
+  publicBaseUrl?: string | null;
   presenceDebounceMs?: number;
 }
 
@@ -38,6 +39,7 @@ export function createApp({
   admin,
   sweepIntervalMs = DEFAULT_SWEEP_INTERVAL_MS,
   rateLimit = DEFAULT_RATE_LIMIT,
+  publicBaseUrl = null,
   presenceDebounceMs = DEFAULT_PRESENCE_DEBOUNCE_MS,
 }: CreateAppOptions = {}) {
   const app = express();
@@ -50,6 +52,9 @@ export function createApp({
     res.json({ ok: true });
   });
 
+  app.get('/config', (_req, res) => {
+    res.json({ publicBaseUrl });
+  });
   app.use('/admin', createAdminRouter(admin));
 
   if (clientDir) {

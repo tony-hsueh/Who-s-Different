@@ -59,12 +59,14 @@ describe('routes', () => {
     expect(readHostToken('r9')).toBe('ht');
   });
 
-  it('/host/:roomId shows the host page in projector mode', () => {
+  it('/host/:roomId shows the host page in projector mode', async () => {
     saveHostToken('r1', 'ht');
     const { container } = renderAt('/host/r1');
     socket.serverConnect();
     socket.answer('host:auth', { ok: true, data: { state: roomState } });
-    expect(screen.getByRole('heading', { name: /主持人/ })).toBeDefined();
+    expect(
+      await screen.findByRole('heading', { name: '誰跟我不一樣？' }),
+    ).toBeDefined();
     expect(container.querySelector('[data-mode="projector"]')).not.toBeNull();
   });
 

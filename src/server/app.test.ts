@@ -106,3 +106,27 @@ describe('Content-Security-Policy', () => {
     expect(csp).toContain("connect-src 'self'");
   });
 });
+
+describe('GET /config', () => {
+  it('reports the public base url the server was given', async () => {
+    const { app } = startApp({ publicBaseUrl: 'https://wd.example.com' });
+    const res = await request(app).get('/config');
+    expect(res.status).toBe(200);
+    expect(res.body).toStrictEqual({ publicBaseUrl: 'https://wd.example.com' });
+  });
+
+  it('reports null when none is configured', async () => {
+    const { app } = startApp();
+    const res = await request(app).get('/config');
+    expect(res.body).toStrictEqual({ publicBaseUrl: null });
+  });
+
+  it('is not swallowed by the SPA fallback', async () => {
+    const { app } = startApp({
+      clientDir: makeClientDir('<!doctype html><title>spa</title>'),
+      publicBaseUrl: 'https://wd.example.com',
+    });
+    const res = await request(app).get('/config');
+    expect(res.body).toStrictEqual({ publicBaseUrl: 'https://wd.example.com' });
+  });
+});

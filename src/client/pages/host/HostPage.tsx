@@ -1,22 +1,25 @@
 import { useParams } from 'react-router';
-import { useConnected, useHostSession, useRoomState } from '../../net/hooks';
+import type { GamePhase } from '../../../shared';
+import { useHostSession, useRoomState } from '../../net/hooks';
+import { FullscreenMessage } from '../../ui/FullscreenMessage';
 import { RoomInvalid } from '../RoomInvalid';
+import { HostLobby } from './HostLobby';
 
-// Placeholder: PR-09 to PR-12 build the real host screens here.
+// Placeholders until the in-game screens exist.
+const PHASE_TITLES: Record<Exclude<GamePhase, 'lobby'>, string> = {
+  playing: '遊戲進行中',
+  reveal: '淘汰揭曉',
+  finished: '遊戲結束',
+};
+
 export function HostPage() {
   const { roomId = '' } = useParams();
   const { status } = useHostSession(roomId);
-  const connected = useConnected();
   const state = useRoomState();
 
   // Without a valid host token this browser cannot run the room, so there is nothing to recover.
   if (status === 'invalid' || status === 'no-token') return <RoomInvalid />;
-
-  return (
-    <main>
-      <h1>主持人畫面</h1>
-      {state && <p>房間代碼：{state.roomCode}</p>}
-      {!connected && <p>連線中…</p>}
-    </main>
-  );
+  if (!state) return <FullscreenMessage title="連線中…" />;
+  if (state.phase === 'lobby') return <HostLobby state={state} />;
+  return <FullscreenMessage title={PHASE_TITLES[state.phase]} />;
 }

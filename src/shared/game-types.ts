@@ -1,5 +1,8 @@
 export type Role = 'majority' | 'minority';
 
+export const MIN_PLAYERS = 4;
+export const MAX_PLAYERS = 15;
+
 export type GamePhase = 'lobby' | 'playing' | 'reveal' | 'finished';
 
 export type GamePlayer = {

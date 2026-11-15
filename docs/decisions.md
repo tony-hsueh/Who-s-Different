@@ -169,3 +169,22 @@
 - **找不到自己時的備案。** 公開狀態裡找不到自己的玩家資料（理論上不會發生）就用暱稱「我」與預設頭像，不讓畫面壞掉。
 - **E2E。** 另一側（主持人與其他玩家）用測試裡的 `socket.io-client` 驅動，因為這個分支沒有主持人畫面。「不含其他玩家的詞語」的測試，是用另外的連線取得其他玩家的詞，再確認手機頁面的 HTML 與文字都沒有。
 - **已知限制。** 模糊遮罩無法保證 App 切換器縮圖；螢幕錄影或旁人直接看螢幕都擋不住，這是票上就接受的範圍。
+
+## PR-09 主持人 Lobby 與 QR Code
+
+沿用總覽假設 1（不做主持人踢人，所以 Lobby 沒有移除玩家的按鈕）。票上沒寫清楚的地方，我這樣選。
+
+- **QR Code 的網址從哪來。** `PUBLIC_BASE_URL` 是 Server 的環境變數，前端讀不到，所以 Server 多一個 `GET /config`，回 `{ publicBaseUrl: string | null }`。Lobby 開啟時問一次；沒設、請求失敗或格式不對，就用主持人瀏覽器網址列的 `window.location.origin`。這樣區網測試時，只要用 `http://<電腦區網 IP>:3000` 開主持人頁，不設環境變數也掃得到。如果主持人用 `localhost` 開，手機掃到的就是 `localhost`，連不上，所以這種情況要設 `PUBLIC_BASE_URL`。`.env.example` 已補上這句說明。
+- **`PUBLIC_BASE_URL` 啟動時檢查。** `parsePublicBaseUrl` 只收 http 或 https，只能是網站根網址（不能帶路徑、query、hash 或帳密），結尾的斜線會去掉；填錯就讓 Server 啟動失敗，不要等到玩家掃了打不開才發現。路徑前綴（例如 `https://example.com/wd`）不收，因為前端路由沒有設 basename，掃到會是 404。
+- **答案回來前不畫 QR Code。** 先畫猜的網址再換掉，投影上會閃一下，而且主持人可能剛好拿那個舊的去掃。
+- **QR Code 自己畫 SVG，不用 `qrcode` 的字串輸出。** 用 `QRCode.create` 取得格子矩陣，把每列連續的深色格合成一條路徑，一個 `<svg>`、一個 `<path>`，沒有 `innerHTML`，也不需要放寬 CSP。糾錯等級 M，留白 4 格。SVG 上有 `data-value` 記下編碼的文字，單元測試靠它檢查「編進去的就是這串網址」。測試沒有真的解碼圖片：編碼文字由 `buildJoinUrl` 組出來，再由元件原樣編碼，這兩段分別有測試。
+- **連結只有房間代碼。** `buildJoinUrl(baseUrl, roomCode)` 回 `${baseUrl}/room/${roomCode}`，沒有 query、沒有 hash，主持人 Token 與 `roomId` 都不在裡面，有測試。
+- **人數上限與下限搬到 `src/shared/game-types.ts`。** 前端要用 `MIN_PLAYERS`、`MAX_PLAYERS` 決定按鈕與「6 / 15」，不能 import Server 的檔案。`rules.ts` 改成從 shared 引入再原樣匯出，原本的 import 不用動。
+- **開始遊戲按鈕。** 人數 4 到 15 才能按，送出後一直 disable，直到伺服器回失敗才恢復。成功時畫面會因為階段改變而離開 Lobby，所以不用另外恢復。是否滿足人數仍由 Server 判斷，前端只是不讓人按。
+- **離線標示沿用「離線」。** 票上寫「未連線」，但 PR-08 的頭像元件已經定為「離線」（文字標籤加虛線框，也寫進 `aria-label`），沿用同一組詞，不在 Lobby 另做一套。目前 `online` 要等 PR-06 才會更新，所以在只有 PR-08 的分支上，所有玩家都顯示離線，這是預期的，不是這個 PR 的問題。
+- **Lobby 斷線提示。** 主持人自己的連線中斷時，頂端出現紅色橫幅「連線中斷，重新連線中…」，玩家名單維持最後一次的內容。
+- **`PlayerGrid` 給 PR-11 重用。** 參數是 `players`、`onSelect`（有給才會變成按鈕）、`isDisabled`、`size`（`md` 或 `sm`）。進場動畫是每個項目掛上時播一次，`prefers-reduced-motion` 時由全域規則關掉。沒有放選取狀態，PR-11 需要時再加。
+- **版面。** 投影（寬度 60rem 以上）左邊 QR Code、代碼、連結、提示，右邊人數、頭像網格、開始按鈕；窄螢幕改成上下排列、可捲動。QR Code 的寬度取 22rem 與視窗高度 40% 的較小值，1920×1080 放 15 人不需捲動，有 e2e 量過。比 1920×1080 小很多的筆電螢幕不保證不捲動，票上也只要求 1920×1080。
+- **非 Lobby 階段是占位畫面。** `playing`、`reveal`、`finished` 只顯示階段名稱，PR-11、PR-12 接手。還沒收到房間狀態時顯示「連線中…」。
+- **E2E 的玩家用 node 端的 socket.io-client 加入。** PR-10 的加入表單還不存在，所以測試直接送 `room:join`，不是 4 個真的玩家瀏覽器。PR-14 會換成真的玩家畫面。
+- **既有測試改了兩處。** 主持人頁原本的標題「主持人畫面」不見了，`router.test.tsx` 與 `layout.spec.ts` 改成找 Lobby 的遊戲名稱標題。

@@ -31,6 +31,17 @@ describe('useAutoHide', () => {
     expect(onHide).not.toHaveBeenCalled();
   });
 
+  it('starts backgrounded when it mounts while the page is hidden', () => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'hidden',
+    });
+    const { result } = renderHook(() => useAutoHide(vi.fn()));
+    expect(result.current.backgrounded).toBe(true);
+    setVisibility('visible');
+    expect(result.current.backgrounded).toBe(false);
+  });
+
   it('hides on pagehide', () => {
     const onHide = vi.fn();
     renderHook(() => useAutoHide(onHide));

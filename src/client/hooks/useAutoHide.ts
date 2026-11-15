@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 // the background, the page is being left, or the window loses focus. `backgrounded` stays
 // true until the page is visible and focused again, so the caller can blur what is on screen.
 export function useAutoHide(onHide: () => void): { backgrounded: boolean } {
-  const [backgrounded, setBackgrounded] = useState(false);
+  const [backgrounded, setBackgrounded] = useState(
+    () => document.visibilityState === 'hidden',
+  );
   const onHideRef = useRef(onHide);
   useEffect(() => {
     onHideRef.current = onHide;

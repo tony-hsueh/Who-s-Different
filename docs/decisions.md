@@ -74,3 +74,25 @@
 - **私有狀態。** `PlayerPrivateState` 有 `playerId`、`phase`、`roundNumber`、`secretWord`、`eliminated`，沒有 `role`。Lobby 時 `secretWord` 是 `null`。玩家不在房間時 `toPlayerPrivateState` 回 `undefined`，呼叫端用 Token 驗證過身分，正常不會遇到。
 - **`online` 預設 `false`。** 更新邏輯留給 PR-06。
 - **測試輔助檔。** `src/server/rooms/test-helpers.ts` 不是測試檔，所以在 `tsconfig.server.json` 排除，不會被編進 `dist`。
+
+## PR-05 Socket.IO 協定與遊戲操作
+
+沿用總覽假設 1（不做踢人）、2（跳過一輪直接 Round +1）、4（Token 12 小時、房間閒置 2 小時清除）。票上沒寫清楚的地方，我這樣選。
+
+- **協定用一張表定義。** `src/shared/protocol.ts` 的 `Requests` 一個事件一筆，寫明送出的 payload 和 ack 成功時帶的 `data`。`ClientToServerEvents` 從它推出來，前後端共用，不會各寫一份而對不上。所有請求都用 `Ack<T>`（`{ ok: true, data } | { ok: false, code, message }`）回覆。
+- **錯誤碼是一個聯集 `ErrorCode`。** 包含 PR-04 的 `RoomErrorCode`，加上 `FORBIDDEN`（身分不對）、`UNAUTHENTICATED`（還沒綁定）、`ALREADY_AUTHENTICATED`、`INVALID_PAYLOAD`、`RATE_LIMITED`、`ROUND_MISMATCH`（`roundNumber` 不是目前這輪）、`INTERNAL_ERROR`（Handler 丟了例外）。
+- **每個請求的處理順序。** 速率限制、payload 格式（zod）、身分與權限、遊戲狀態。不是主持人的玩家打 `game:start` 會先收到 `FORBIDDEN`，不會看到狀態相關的錯誤。沒綁定的 socket 收到 `UNAUTHENTICATED`。
+- **沒帶 ack 的請求不會讓 Server 崩潰。** 照常處理，只是沒有回覆。只帶 ack、沒帶 payload 的請求（`socket.emit('room:create', ack)`）當成空 payload。空 payload 的事件（`room:create`、`room:leave`、`game:start`、`game:next-round`、`game:reset`）收到多餘欄位會被擋成 `INVALID_PAYLOAD`。
+- **字串長度上限只擋離譜的輸入。** Token 256、id 128、房間代碼 32、暱稱 200 字。暱稱真正的 12 字上限仍由房間規則判斷。`roundNumber` 必須是 1 以上的整數。
+- **綁定只做第一次。** `room:create` 不會綁定 socket，要再送 `host:auth`。已綁定的 socket 再送 `host:auth` 或 `player:auth` 回 `ALREADY_AUTHENTICATED`，換身分要重新連線。綁定與離開頻道的程式集中在 `src/server/auth.ts`，PR-06 做重連時改這裡。不做在線狀態，`online` 仍是 `false`。
+- **`room:join` 不綁定 socket。** 加入後要送 `player:auth` 才會收到私人狀態。`room:join` 成功與 `room:leave` 成功都會對房間廣播新的 `room:state`，主持人的 Lobby 才會即時更新。
+- **頻道。** 綁定時 socket 進 `room:{roomId}`；主持人另進 `host:{roomId}`；玩家另進 `player:{playerId}`。`game:player-state` 只送 `player:{playerId}`，主持人沒進這個頻道，所以永遠收不到。
+- **冪等的定義。** 已經是目標狀態就回 `ok`、不重做、不廣播，只記一筆 `OPERATION_IGNORED`。`game:start` 在 `playing` 時；`game:next-round` 在 `playing` 時；`game:reset` 在 Lobby 時。其他階段照常交給房間規則，回 `INVALID_PHASE`（例如 `reveal` 時 `game:start`、`playing` 時 `game:reset`）。
+- **同一輪兩次淘汰。** `game:eliminate` 與 `game:skip-round` 先比對 `roundNumber`，不符回 `ROUND_MISMATCH`。同一輪同時送兩次淘汰時，第一個把階段推到 `reveal`，第二個回 `INVALID_PHASE`。Socket.IO 對同一條連線的事件是依序處理，所以不需要鎖。
+- **結束後的淘汰。** `finished` 之後 `roundNumber` 沒變，所以帶正確 `roundNumber` 的淘汰回 `INVALID_PHASE`。
+- **速率限制。** 每個 socket 一個滑動視窗，任何 1 秒內最多放行 10 個請求，第 11 個起回 `RATE_LIMITED`。被拒的請求不計入視窗，所以不會延長封鎖。只有已註冊的事件會計數，未知事件直接被 Socket.IO 丟掉。時鐘與房間共用注入的 `now`，所以測試可以快轉。
+- **清除過期房間。** `createApp` 開一個 `setInterval`（預設 60 秒，`unref()` 不會擋住程序結束）呼叫 `store.sweepExpired()`。被清掉的房間對 `room:{roomId}` 廣播 `room:closed`，然後讓裡面的 socket 離開房間與主持人頻道，但不斷線。之後這些 socket 再送操作會收到 `ROOM_NOT_FOUND`，前端可以據此顯示房間失效。
+- **`createApp` 可注入。** 選項有 `store`、`logger`、`now`、`sweepIntervalMs`、`rateLimit`。回傳多了 `store`、`stopSweep()` 與 `close()`（停計時器並關閉所有連線與 HTTP Server）。原本的 `echo` 範例事件與它的測試移除，`/healthz` 與靜態檔行為不變。
+- **Logger 介面先定好。** `src/server/log/noop-logger.ts` 定義 `EventLogger.logEvent({ type, roomId?, gameId?, roundNumber?, playerId?, payload })`，預設是什麼都不做。每個 Handler 的成功點都呼叫，所有被拒的請求（含格式錯誤、被限速）統一記 `OPERATION_REJECTED`，payload 只有事件名與錯誤碼。PR-07 只要換掉實作。`payload` 不放秘密詞語、存活者陣營與 Token，並有測試檢查。Logger 丟例外時只印到 stderr，不影響回覆。`roomId` 是選填，因為「房間代碼不存在」時沒有房間 id。
+- **加入與回覆的資料很精簡。** `room:create` 回 `roomId`、`roomCode`、`hostToken`；`room:join` 回 `playerId`、`sessionToken`；`host:auth` 回 `state`（公開狀態）；`player:auth` 回 `state` 與 `privateState`。其他操作成功時 `data` 是 `null`，新狀態靠廣播。
+- **整合測試的位置。** `tests/integration/`，用真的 Server（port 0）與 `socket.io-client`，加進 `server` 專案的 `include`、`tsconfig.node.json` 與 ESLint 的 Node 範圍。測試用共用的 `TestClient` 記下每個 socket 收到的所有訊息（含 ack），秘密詞語測試就是在這堆訊息裡搜尋。

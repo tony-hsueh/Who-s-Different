@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
+import { parsePublicBaseUrl } from './config.js';
 import { questionBank } from './questions/bank.js';
 import { validateBank } from './questions/validate.js';
 
@@ -14,7 +15,10 @@ const clientDir = existsSync(builtClient) ? builtClient : undefined;
 // A bad bank must stop the server from starting.
 validateBank(questionBank);
 
-const { httpServer } = createApp({ clientDir });
+const { httpServer } = createApp({
+  clientDir,
+  publicBaseUrl: parsePublicBaseUrl(process.env.PUBLIC_BASE_URL),
+});
 httpServer.listen(port, '0.0.0.0', () => {
   console.log(`listening on http://0.0.0.0:${port}`);
 });

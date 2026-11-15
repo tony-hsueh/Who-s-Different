@@ -11,6 +11,7 @@ export default defineConfig({
     proxy: {
       '/socket.io': { target: backend, ws: true },
       '/healthz': backend,
+      '/config': backend,
     },
   },
 });

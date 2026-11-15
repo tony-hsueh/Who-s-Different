@@ -1,15 +1,16 @@
-import type {
-  GamePlayer,
-  GameState,
-  Role,
-  RuleErrorCode,
-  RuleResult,
-  WordPair,
+import {
+  MAX_PLAYERS,
+  MIN_PLAYERS,
+  type GamePlayer,
+  type GameState,
+  type Role,
+  type RuleErrorCode,
+  type RuleResult,
+  type WordPair,
 } from '../../shared/game-types.js';
 import { shuffle, type Rng } from './random.js';
 
-export const MIN_PLAYERS = 4;
-export const MAX_PLAYERS = 15;
+export { MAX_PLAYERS, MIN_PLAYERS };
 
 export function minorityCountFor(playerCount: number): number {
   if (

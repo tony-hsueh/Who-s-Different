@@ -20,6 +20,7 @@ export interface CreateAppOptions {
   now?: () => number;
   sweepIntervalMs?: number;
   rateLimit?: RateLimitOptions;
+  publicBaseUrl?: string | null;
 }
 
 export function createApp({
@@ -29,6 +30,7 @@ export function createApp({
   logger = noopLogger,
   sweepIntervalMs = DEFAULT_SWEEP_INTERVAL_MS,
   rateLimit = DEFAULT_RATE_LIMIT,
+  publicBaseUrl = null,
 }: CreateAppOptions = {}) {
   const app = express();
   const httpServer = createServer(app);
@@ -38,6 +40,10 @@ export function createApp({
 
   app.get('/healthz', (_req, res) => {
     res.json({ ok: true });
+  });
+
+  app.get('/config', (_req, res) => {
+    res.json({ publicBaseUrl });
   });
 
   if (clientDir) {

@@ -48,7 +48,7 @@ async function openLobby(initial: PublicRoomState) {
   );
   socket.serverConnect();
   socket.answer('host:auth', { ok: true, data: { state: initial } });
-  await screen.findByText('ABC234');
+  await screen.findByRole('heading', { level: 1 });
   return view;
 }
 

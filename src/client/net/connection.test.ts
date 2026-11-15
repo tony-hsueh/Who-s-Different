@@ -133,6 +133,17 @@ describe('host identity', () => {
     expect(readHostToken('r1')).toBeNull();
   });
 
+  it('stays invalid after a reconnect', () => {
+    store.setIdentity({ kind: 'host', roomId: 'r1' });
+    socket.serverConnect();
+    socket.answer('host:auth', ok({ state: roomState }));
+    socket.serverEmit('room:closed', { roomId: 'r1' });
+    socket.serverDisconnect();
+    socket.serverConnect();
+    expect(store.getSnapshot().status).toBe('invalid');
+    expect(socket.requestsFor('host:auth')).toHaveLength(1);
+  });
+
   it('ignores room:closed for another room', () => {
     store.setIdentity({ kind: 'host', roomId: 'r1' });
     socket.serverConnect();
@@ -263,6 +274,20 @@ describe('request', () => {
     socket.answer('game:start', ok(null));
     expect(await promise).toStrictEqual(ok(null));
     expect(socket.requestsFor('game:start')[0]?.payload).toStrictEqual({});
+  });
+
+  it('treats ROOM_NOT_FOUND from any request as a closed room', async () => {
+    savePlayerToken('ABCD', 'player-token');
+    store.setIdentity({ kind: 'player', roomCode: 'ABCD' });
+    socket.answer('player:auth', ok({ state: roomState, privateState }));
+    const promise = store.request('room:join', {
+      roomCode: 'ABCD',
+      nickname: 'x',
+    });
+    socket.answer('room:join', fail('ROOM_NOT_FOUND'));
+    expect(await promise).toMatchObject({ ok: false, code: 'ROOM_NOT_FOUND' });
+    expect(store.getSnapshot().status).toBe('invalid');
+    expect(readPlayerToken('ABCD')).toBeNull();
   });
 
   it('gives up with INTERNAL_ERROR when the server never answers', async () => {

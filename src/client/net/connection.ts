@@ -105,6 +105,8 @@ export class ConnectionStore {
   reauth = () => {
     const identity = this.identity;
     if (!identity || !this.socket.connected) return;
+    // A closed room stays closed until the page switches to another identity.
+    if (this.snapshot.status === 'invalid') return;
     const round = ++this.authRound;
     const token =
       identity.kind === 'host'
@@ -149,6 +151,9 @@ export class ConnectionStore {
       }, REQUEST_TIMEOUT_MS);
       this.socket.emit(event, payload, (ack) => {
         clearTimeout(timer);
+        if (!ack.ok && ack.code === 'ROOM_NOT_FOUND' && this.identity) {
+          this.markInvalid(this.identity);
+        }
         resolve(ack as Ack<Requests[E]['data']>);
       });
     });

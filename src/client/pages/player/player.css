@@ -91,6 +91,11 @@
   font-weight: 700;
 }
 
+.wd-secret__instruction {
+  max-width: 24rem;
+  font-weight: 700;
+}
+
 .wd-secret__panel {
   display: grid;
   place-items: center;

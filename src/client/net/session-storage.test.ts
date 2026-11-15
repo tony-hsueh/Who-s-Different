@@ -45,6 +45,18 @@ describe('with working localStorage', () => {
   });
 });
 
+describe('when writes fail but reads work', () => {
+  it('still returns the token that could not be stored', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError');
+    });
+    saveHostToken('quota-1', 'tok');
+    expect(readHostToken('quota-1')).toBe('tok');
+    clearHostToken('quota-1');
+    expect(readHostToken('quota-1')).toBeNull();
+  });
+});
+
 describe('with localStorage disabled', () => {
   function disableStorage() {
     vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {

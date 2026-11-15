@@ -13,6 +13,7 @@ interface Pending {
 // A fake Socket.IO client for tests. The `server*` and `answer` methods play the server.
 export class MockSocket implements SocketLike {
   connected = false;
+  connectCalls = 0;
   readonly sent: Pending[] = [];
   private readonly listeners = new Map<string, Set<Listener>>();
 
@@ -34,11 +35,12 @@ export class MockSocket implements SocketLike {
   }
 
   connect() {
+    this.connectCalls++;
     return this;
   }
 
   disconnect() {
-    this.connected = false;
+    if (this.connected) this.serverDisconnect();
     return this;
   }
 

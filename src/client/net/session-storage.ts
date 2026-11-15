@@ -15,11 +15,14 @@ function save(key: string, token: string) {
   }
 }
 
+// The memory copy exists only while a write to storage has failed, so it wins over what storage returns.
 function read(key: string): string | null {
+  const fallback = memory.get(key);
+  if (fallback !== undefined) return fallback;
   try {
     return localStorage.getItem(key);
   } catch {
-    return memory.get(key) ?? null;
+    return null;
   }
 }
 

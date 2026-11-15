@@ -45,6 +45,9 @@ export class ConnectionStore {
   private identity: Identity | null = null;
   // Bumped whenever an in-flight auth answer stops being relevant.
   private authRound = 0;
+  // The server binds a socket to one identity for its lifetime, so once an auth may
+  // have gone out, switching identity needs a fresh connection.
+  private mayBeBound = false;
   private snapshot: ConnectionSnapshot;
 
   constructor({ socket, onError }: Options) {
@@ -89,6 +92,7 @@ export class ConnectionStore {
     if (sameIdentity(this.identity, identity)) return;
     this.identity = identity;
     this.authRound++;
+    if (this.mayBeBound) this.rebind();
     this.update({
       roomState: null,
       playerState: null,
@@ -111,6 +115,7 @@ export class ConnectionStore {
       return;
     }
     this.update({ status: 'authenticating' });
+    this.mayBeBound = true;
     const onAck = (ack: Ack<unknown>) => {
       if (round === this.authRound) this.handleAuthAck(identity, ack);
     };
@@ -126,6 +131,15 @@ export class ConnectionStore {
     payload: Requests[E]['payload'],
   ): Promise<Ack<Requests[E]['data']>> {
     return new Promise((resolve) => {
+      // Socket.IO would buffer this and send it before the reconnect handler can authenticate.
+      if (!this.socket.connected) {
+        resolve({
+          ok: false,
+          code: 'INTERNAL_ERROR',
+          message: 'not connected',
+        });
+        return;
+      }
       const timer = setTimeout(() => {
         resolve({
           ok: false,
@@ -189,7 +203,14 @@ export class ConnectionStore {
     this.reauth();
   };
 
+  private rebind() {
+    this.mayBeBound = false;
+    this.socket.disconnect();
+    this.socket.connect();
+  }
+
   private handleDisconnect = () => {
+    this.mayBeBound = false;
     const waiting =
       this.snapshot.status === 'ready' ||
       this.snapshot.status === 'authenticating';

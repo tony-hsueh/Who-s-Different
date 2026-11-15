@@ -22,7 +22,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   INVALID_PAYLOAD: '送出的資料不正確',
   RATE_LIMITED: '操作太快了，請稍等一下',
   ROUND_MISMATCH: '畫面不是最新的，請稍後再試',
-  INTERNAL_ERROR: '發生未預期的錯誤，請再試一次',
+  INTERNAL_ERROR: '連線或伺服器出了問題，請稍後再試',
 };
 
 export function errorMessage(code: ErrorCode): string {

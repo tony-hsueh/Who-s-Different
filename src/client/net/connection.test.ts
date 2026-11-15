@@ -158,6 +158,38 @@ describe('host identity', () => {
     expect(readHostToken('r1')).toBe('host-token');
   });
 
+  it('opens a fresh connection when the identity changes after auth', () => {
+    saveHostToken('r2', 'host-token-2');
+    store.setIdentity({ kind: 'host', roomId: 'r1' });
+    socket.serverConnect();
+    socket.answer('host:auth', ok({ state: roomState }));
+    const connectsBefore = socket.connectCalls;
+    store.setIdentity({ kind: 'host', roomId: 'r2' });
+    expect(socket.connectCalls).toBe(connectsBefore + 1);
+    expect(store.getSnapshot().connected).toBe(false);
+    expect(socket.requestsFor('host:auth')).toHaveLength(1);
+    socket.serverConnect();
+    expect(socket.requestsFor('host:auth')[1]?.payload).toStrictEqual({
+      hostToken: 'host-token-2',
+    });
+  });
+
+  it('opens a fresh connection when leaving a room', () => {
+    store.setIdentity({ kind: 'host', roomId: 'r1' });
+    socket.serverConnect();
+    socket.answer('host:auth', ok({ state: roomState }));
+    const connectsBefore = socket.connectCalls;
+    store.setIdentity(null);
+    expect(socket.connectCalls).toBe(connectsBefore + 1);
+  });
+
+  it('does not reconnect when no auth was ever sent', () => {
+    const connectsBefore = socket.connectCalls;
+    store.setIdentity({ kind: 'host', roomId: 'nothing-saved' });
+    store.setIdentity(null);
+    expect(socket.connectCalls).toBe(connectsBefore);
+  });
+
   it('ignores an auth answer that arrives after the identity changed', () => {
     store.setIdentity({ kind: 'host', roomId: 'r1' });
     socket.serverConnect();
@@ -215,6 +247,17 @@ describe('player identity', () => {
 });
 
 describe('request', () => {
+  beforeEach(() => socket.serverConnect());
+
+  it('fails fast instead of buffering while disconnected', async () => {
+    socket.serverDisconnect();
+    expect(await store.request('game:start', {})).toMatchObject({
+      ok: false,
+      code: 'INTERNAL_ERROR',
+    });
+    expect(socket.sent).toHaveLength(0);
+  });
+
   it('resolves with the server ack', async () => {
     const promise = store.request('game:start', {});
     socket.answer('game:start', ok(null));

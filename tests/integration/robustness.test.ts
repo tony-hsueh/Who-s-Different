@@ -150,6 +150,7 @@ describe('expired rooms', () => {
     });
     expect(await host.call('game:start', {})).toMatchObject({
       ok: false,
+      code: 'ROOM_NOT_FOUND',
     });
   });
 

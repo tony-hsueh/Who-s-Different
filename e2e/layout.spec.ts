@@ -57,11 +57,15 @@ test('a created room opens the host page and survives a reload', async ({
   await page.goto('/');
   await page.getByRole('button', { name: '建立房間' }).click();
   await expect(page).toHaveURL(/\/host\/.+/);
-  await expect(page.getByRole('heading', { name: /主持人/ })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '誰跟我不一樣？' }),
+  ).toBeVisible();
   const url = page.url();
   await page.reload();
   await expect(page).toHaveURL(url);
-  await expect(page.getByRole('heading', { name: /主持人/ })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '誰跟我不一樣？' }),
+  ).toBeVisible();
   await expect(page.getByText(/房間代碼/)).toBeVisible();
 });
 

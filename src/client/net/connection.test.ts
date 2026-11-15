@@ -342,3 +342,91 @@ describe('socketOptions', () => {
     );
   });
 });
+
+describe('waking up after the network or the page changed (QA-01)', () => {
+  let clock: number;
+  let visibility: DocumentVisibilityState;
+
+  beforeEach(() => {
+    store.stop();
+    clock = 1_000_000;
+    visibility = 'visible';
+    vi.spyOn(document, 'visibilityState', 'get').mockImplementation(
+      () => visibility,
+    );
+    socket = new MockSocket();
+    store = new ConnectionStore({ socket, onError, now: () => clock });
+    store.start();
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  const setVisibility = (next: DocumentVisibilityState) => {
+    visibility = next;
+    document.dispatchEvent(new Event('visibilitychange'));
+  };
+
+  it('reconnect() drops the old connection and opens a new one', () => {
+    socket.serverConnect();
+    const before = socket.connectCalls;
+    store.reconnect();
+    expect(socket.connected).toBe(false);
+    expect(socket.connectCalls).toBe(before + 1);
+  });
+
+  it('reconnects at once when the browser reports it is online again, even if it still looks connected', () => {
+    socket.serverConnect();
+    const before = socket.connectCalls;
+    window.dispatchEvent(new Event('online'));
+    expect(socket.connectCalls).toBe(before + 1);
+    expect(socket.connected).toBe(false);
+  });
+
+  it('re-authenticates the same identity on the new connection, without a second identity', () => {
+    saveHostToken('r1', 'host-token');
+    store.setIdentity({ kind: 'host', roomId: 'r1' });
+    socket.serverConnect();
+    socket.answer('host:auth', ok({ state: roomState }));
+    window.dispatchEvent(new Event('online'));
+    socket.serverConnect();
+    const auths = socket.requestsFor('host:auth');
+    expect(auths).toHaveLength(2);
+    expect(auths[1]?.payload).toEqual({ hostToken: 'host-token' });
+  });
+
+  it('reconnects when the page becomes visible while the socket is down', () => {
+    setVisibility('hidden');
+    const before = socket.connectCalls;
+    setVisibility('visible');
+    expect(socket.connectCalls).toBe(before + 1);
+  });
+
+  it('leaves a healthy connection alone after a short time in the background', () => {
+    socket.serverConnect();
+    setVisibility('hidden');
+    clock += 5_000;
+    const before = socket.connectCalls;
+    setVisibility('visible');
+    expect(socket.connectCalls).toBe(before);
+    expect(socket.connected).toBe(true);
+  });
+
+  it('replaces a connection that was in the background for longer than one heartbeat', () => {
+    socket.serverConnect();
+    setVisibility('hidden');
+    clock += 15_000;
+    const before = socket.connectCalls;
+    setVisibility('visible');
+    expect(socket.connectCalls).toBe(before + 1);
+    expect(socket.connected).toBe(false);
+  });
+
+  it('ignores the events after stop()', () => {
+    store.stop();
+    const before = socket.connectCalls;
+    window.dispatchEvent(new Event('online'));
+    setVisibility('hidden');
+    setVisibility('visible');
+    expect(socket.connectCalls).toBe(before);
+  });
+});

@@ -32,10 +32,10 @@
 | 第一次玩的新手         | [01-new-player.md](01-new-player.md)         | 流程走得通，2 個 P3（沒有輸入房間代碼的入口、題目卡沒說明怎麼玩）                                                        |
 | 重複點擊的玩家         | [02-repeat-clicker.md](02-repeat-clicker.md) | 真實連點全部正確；程式內同步連點 6 次會建出 6 個房間（P3）                                                               |
 | 不斷重新整理的玩家     | [03-refresher.md](03-refresher.md)           | 各 phase 重新整理都能接回，題目重整後會重新隱藏                                                                          |
-| 中途斷線重連的玩家     | [04-reconnect.md](04-reconnect.md)           | 斷線期間被淘汰能正確補上；網路無聲中斷時畫面最久停 45 秒（P2）                                                           |
+| 中途斷線重連的玩家     | [04-reconnect.md](04-reconnect.md)           | 斷線期間被淘汰能正確補上；網路無聲中斷時畫面最久停 45 秒（P2，已修，現在最久 20 秒）                                     |
 | 想偷看別人題目的玩家   | [05-peeker.md](05-peeker.md)                 | 沒有找到偷看別人詞語或身分的方法；2 個 P3（無 IP 限流、`X-Powered-By`）                                                  |
 | 操作主持人介面的使用者 | [06-host-ui.md](06-host-ui.md)               | 連點、錯 phase、雙分頁都被擋住；換瀏覽器開主持人網址的訊息有誤導（P3）；首頁在連線完成前按「建立房間」會出錯誤提示（P2） |
 
-共 9 筆問題：2 筆 P2、7 筆 P3，見 [bugs.md](bugs.md)。**P0、P1：沒有找到。**
+共 9 筆問題：2 筆 P2、7 筆 P3，見 [bugs.md](bugs.md)。兩筆 P2（QA-01、QA-09）已由修復 PR 修好。**P0、P1：沒有找到。**
 
 整個 QA 期間 Event Log 沒有 `SERVER_ERROR`，Server 輸出沒有任何 error 行。

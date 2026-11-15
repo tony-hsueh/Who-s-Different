@@ -3,7 +3,7 @@ import { errorMessage } from '../../i18n/errors';
 import { useRequest } from '../../net/hooks';
 import { savePlayerToken } from '../../net/session-storage';
 import { Cover } from '../../components/Cover';
-import { Button } from '../../ui/Button';
+import { ServerButton } from '../../ui/ServerButton';
 
 export interface JoinFormProps {
   roomCode: string;
@@ -66,9 +66,9 @@ export function JoinForm({ roomCode, onJoined }: JoinFormProps) {
             {error}
           </p>
         )}
-        <Button type="submit" size="lg" disabled={pending}>
+        <ServerButton type="submit" size="lg" disabled={pending}>
           加入
-        </Button>
+        </ServerButton>
       </form>
     </main>
   );

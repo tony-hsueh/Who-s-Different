@@ -10,7 +10,7 @@ import { QrCode } from '../../components/QrCode';
 import { buildJoinUrl } from '../../lib/join-url';
 import { useConnected, useRequest } from '../../net/hooks';
 import { usePublicBaseUrl } from '../../net/public-config';
-import { Button } from '../../ui/Button';
+import { ServerButton } from '../../ui/ServerButton';
 import './HostLobby.css';
 
 export function HostLobby({ state }: { state: PublicRoomState }) {
@@ -61,13 +61,13 @@ export function HostLobby({ state }: { state: PublicRoomState }) {
         <div className="host-lobby__grid">
           <PlayerGrid players={state.players} />
         </div>
-        <Button
+        <ServerButton
           size="lg"
           disabled={!canStart || starting}
           onClick={() => void start()}
         >
           開始遊戲
-        </Button>
+        </ServerButton>
       </section>
     </main>
   );

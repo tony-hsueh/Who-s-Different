@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import type {
   Ack,
   PlayerPrivateState,
@@ -18,6 +18,36 @@ function useSnapshot<T>(select: (snapshot: ConnectionSnapshot) => T): T {
 }
 
 export const useConnected = () => useSnapshot((s) => s.connected);
+
+export const UNREACHABLE_AFTER_MS = 5_000;
+
+export type ServerStatus = 'ready' | 'connecting' | 'unreachable';
+
+// What a button that needs the server should show: usable, still waiting, or given up waiting.
+export function useServerStatus(): {
+  status: ServerStatus;
+  retry: () => void;
+} {
+  const store = useConnectionStore();
+  const connected = useConnected();
+  const [gaveUp, setGaveUp] = useState(false);
+  // Each retry restarts the wait, so the button says 連線中… again while it tries.
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    if (connected) return;
+    const timer = setTimeout(() => setGaveUp(true), UNREACHABLE_AFTER_MS);
+    return () => {
+      clearTimeout(timer);
+      setGaveUp(false);
+    };
+  }, [connected, attempt]);
+  const retry = useCallback(() => {
+    store.reconnect();
+    setAttempt((n) => n + 1);
+  }, [store]);
+  const status = connected ? 'ready' : gaveUp ? 'unreachable' : 'connecting';
+  return { status, retry };
+}
 
 export const useRoomState = (): PublicRoomState | null =>
   useSnapshot((s) => s.roomState);

@@ -149,8 +149,9 @@
     display: none;
   }
 
+  /* tokens.css shortens every animation under reduced motion with !important; the fade must outlast that. */
   .host-reveal[data-outcome] .host-reveal__icon,
   .host-reveal[data-outcome] .host-reveal__title {
-    animation: host-reveal-fade 0.6s ease-out both;
+    animation: host-reveal-fade 0.6s ease-out both !important;
   }
 }

@@ -290,10 +290,11 @@ test('reduced motion swaps the shake and confetti for a fade', async ({
   await page.getByRole('button', { name: '開始遊戲' }).click();
   await eliminate(page, '機器人1');
   await expect(page.locator('.host-reveal')).toBeVisible();
-  const animation = await page
-    .locator('.host-reveal__title')
-    .evaluate((el) => getComputedStyle(el).animationName);
-  expect(animation).toBe('host-reveal-fade');
+  const animation = await page.locator('.host-reveal__title').evaluate((el) => {
+    const style = getComputedStyle(el);
+    return [style.animationName, style.animationDuration];
+  });
+  expect(animation).toStrictEqual(['host-reveal-fade', '0.6s']);
   const confetti = page.locator('.host-reveal__confetti');
   if (await confetti.count()) await expect(confetti).toBeHidden();
 });

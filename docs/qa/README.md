@@ -18,7 +18,7 @@
   - `qa/<角色>/*.png`：截圖。
   - `qa/server.log`、`qa/db/events.db`：Server 輸出與 Event Log。
 - 只有幾張會用到的小截圖放進 `docs/qa/img/`。
-- 各份報告的「Game ID」可用 `GET /admin/games/<gameId>/events` 或 `npm run logs -- --game <gameId>` 查（見 [event-log.md](../event-log.md)）。
+- 各份報告的「Game ID」可用 `GET /admin/games/<gameId>/events` 或 `npm run logs -- --game <gameId>` 查（見 [event-log.md](../event-log.md)。連線、加入、離開的事件沒有 Game ID，要用房間 ID 查）。
 
 ## 怎麼讀結果
 

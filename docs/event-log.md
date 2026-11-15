@@ -1,14 +1,14 @@
 # Event Log
 
-每一場遊戲的重要事件都寫進 SQLite。出問題時，用 Game ID 可以還原當時發生了什麼事。Log 裡沒有詞語、Token，也沒有存活玩家的陣營。
+每一場遊戲的重要事件都寫進 SQLite。出問題時，用 Game ID 可以還原一場遊戲的過程，用房間 ID 可以看到加入、離開與連線的事件。Log 裡沒有詞語、Token，也沒有存活玩家的陣營。
 
 ## 查詢方式
 
 ### 1. CLI（在跑 Server 的機器上）
 
 ```bash
-npm run logs -- --game <gameId>       # 一場遊戲的所有事件
-npm run logs -- --room <roomId>       # 一個房間的所有事件（可以從事件裡找出 Game ID）
+npm run logs -- --game <gameId>       # 一場遊戲的事件（只含有 Game ID 的事件，見下方「Game ID 查得到什麼」）
+npm run logs -- --room <roomId>       # 一個房間的所有事件（含連線與加入離開，可以從事件裡找出 Game ID）
 npm run logs -- --private             # 所有遊戲的題目與陣營分配
 npm run logs -- --private --game <gameId>
 npm run logs:cleanup                  # 立刻清理 30 天前的資料
@@ -53,6 +53,12 @@ sqlite3 data/events.db "select timestamp, event_type, player_id, payload from ga
 
 沒有玩家身分的事件（例如猜錯 Token）`room_id` 是空字串。
 
+## Game ID 查得到什麼
+
+`--game` 與 `/admin/games/:gameId/events` 只回有 Game ID 的事件：`GAME_STARTED`、`WORDS_ASSIGNED`、`ROUND_STARTED`、`ELIMINATION_CONFIRMED`、`PLAYER_ELIMINATED`、`ROUND_SKIPPED`、`WIN_CONDITION_MET`、`GAME_FINISHED`、`GAME_RESET`，以及遊戲進行中發生的 `OPERATION_IGNORED`、`OPERATION_REJECTED`。
+
+**這些事件沒有 Game ID，只查得到房間：** `ROOM_CREATED`、`HOST_AUTHENTICATED`、`PLAYER_JOINED`、`PLAYER_AUTHENTICATED`、`PLAYER_LEFT`、`PLAYER_DISCONNECTED`、`PLAYER_RECONNECTED`、`HOST_DISCONNECTED`、`HOST_RECONNECTED`，以及沒有綁定身分的請求被拒絕（`room_id` 是空字串，哪個房間都查不到）。查連線問題請用 `--room <roomId>`，再依 `player_id` 與時間過濾。（這是 QA 時從 18 場遊戲的 Log 數出來的，哪些事件帶 Game ID 以 `src/server/` 寫入處為準。）
+
 ## 事件清單
 
 | 事件                    | 什麼時候寫                                                    | `payload`                                                                                        |
@@ -85,10 +91,11 @@ sqlite3 data/events.db "select timestamp, event_type, player_id, payload from ga
 ## 怎麼查問題
 
 1. 從主持人網址取得 `roomId`，查 `--room <roomId>`，看出 Game ID。
-2. 用 `--game <gameId>` 看整場順序。
+2. 用 `--game <gameId>` 看遊戲本身的順序（開始、每輪、淘汰、結束）。
+   連線、加入、離開沒有 Game ID，要在 `--room <roomId>` 的結果裡找。
 3. 常見判讀：
    - 一直出現 `OPERATION_REJECTED`：看 `code`。`ROUND_MISMATCH` 多半是兩個主持人分頁或過時的視窗；`INVALID_TOKEN` 是 Token 錯或過期。
-   - `PLAYER_DISCONNECTED` 與 `PLAYER_RECONNECTED` 的時間差就是玩家離線多久（加上 3 秒 debounce）。
+   - `PLAYER_DISCONNECTED` 與 `PLAYER_RECONNECTED` 的時間差就是玩家離線多久（`PLAYER_DISCONNECTED` 是斷線後 3 秒才寫，所以實際離線要再加 3 秒）。這兩種事件沒有 Game ID，用 `--room <roomId>` 查，再依 `player_id` 過濾。
    - `SERVER_ERROR`：Server 的標準錯誤輸出也有對應的堆疊。
    - 玩家說「我看到的詞不一樣」：`--private --game <gameId>` 看真正的詞語與陣營分配。
 

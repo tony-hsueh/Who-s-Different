@@ -10,9 +10,9 @@
 | ----------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `npm run lint`                            | 通過（ESLint 與 Prettier）                                       | `lint.log`                                                             |
 | `npm run typecheck`                       | 通過                                                             | `typecheck.log`                                                        |
-| `npx vitest run`                          | **469 個測試全部通過**，35 個檔案，25.8 秒                       | `vitest.log`                                                           |
+| `npx vitest run`                          | **469 個測試全部通過**，35 個檔案，8.2 秒                        | `vitest.log`                                                           |
 | `npm run build`                           | 通過                                                             | `build.log`                                                            |
-| `npx playwright test --workers=2`         | **67 個測試全部通過**，46.6 秒                                   | `e2e.log`                                                              |
+| `npx playwright test --workers=2`         | **67 個測試全部通過**，45.8 秒                                   | `e2e.log`                                                              |
 | `npx playwright test`（預設 8 個 worker） | **失敗 1 個，連續兩次**，其餘 66 個通過（見下面）                | `e2e-default-workers-run2.log`（第 1 次的紀錄被覆蓋）                  |
 | 探索式 QA                                 | 6 個角色、9 筆問題（0 個 P0、0 個 P1、2 個 P2、7 個 P3）         | [qa/README.md](qa/README.md)、[qa/bugs.md](qa/bugs.md)                 |
 | Docker 映像檔                             | 建置成功，容器內 `/healthz` 回 `{"ok":true}`，健康檢查 `healthy` | `docker-build.log`、`docker-check.log`                                 |
@@ -72,7 +72,7 @@
 多人操作有兩層證據：
 
 - **E2E 的 21 個情境**，真的瀏覽器模擬主持人加 4 到 15 支手機。
-- **探索式 QA**，在建置後的正式版本上跑 6 個角色，共 18 場遊戲、325 個房間、約 1300 筆事件。每一項的結果對照 Event Log。QA 期間 Event Log 沒有 `SERVER_ERROR`，Server 輸出沒有 error 行。
+- **探索式 QA**，在建置後的正式版本上跑 6 個角色，共 18 場遊戲、326 個房間、約 1300 筆事件。每一項的結果對照 Event Log。QA 期間 Event Log 沒有 `SERVER_ERROR`，Server 輸出沒有 error 行。
 
 | 角色                   | 報告                                               | Game ID（部分）                           |
 | ---------------------- | -------------------------------------------------- | ----------------------------------------- |

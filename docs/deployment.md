@@ -24,6 +24,8 @@
 
 需求：Node.js 20.19 以上、npm 10 以上、Git。`better-sqlite3` 在常見平台（例如 Linux x64、Windows x64）有預編譯檔；沒有預編譯檔的平台會從原始碼編譯，要先裝 Python 3、make 與 C++ 編譯器。
 
+先在自己的電腦或伺服器上試跑（不需要 root，資料庫用預設的 `./data/events.db`）：
+
 ```bash
 git clone https://github.com/tony-hsueh/Who-s-Different.git
 cd Who-s-Different
@@ -33,7 +35,6 @@ npm run build
 export PORT=3000
 export PUBLIC_BASE_URL=https://game.example.com
 export ADMIN_TOKEN=$(openssl rand -base64 32)
-export LOG_DB_PATH=/var/lib/whos-different/events.db
 npm start
 ```
 
@@ -44,7 +45,21 @@ curl http://localhost:3000/healthz
 # {"ok":true}
 ```
 
-用 systemd 常駐（`/etc/systemd/system/whos-different.service`）：
+要常駐在 Linux 伺服器上，先建立服務帳號與目錄，把程式裝到 `/opt/whos-different`，資料庫放 `/var/lib/whos-different`（服務帳號要有寫入權限，Server 只會建立不存在的資料夾，不會處理權限）：
+
+```bash
+sudo useradd --system --home-dir /opt/whos-different --shell /usr/sbin/nologin whosdifferent
+sudo mkdir -p /opt/whos-different /var/lib/whos-different
+sudo chown whosdifferent: /opt/whos-different /var/lib/whos-different
+sudo -u whosdifferent git clone https://github.com/tony-hsueh/Who-s-Different.git /opt/whos-different
+cd /opt/whos-different
+sudo -u whosdifferent npm ci
+sudo -u whosdifferent npm run build
+echo "ADMIN_TOKEN=$(openssl rand -base64 32)" | sudo tee /etc/whos-different.env >/dev/null
+sudo chmod 600 /etc/whos-different.env
+```
+
+然後用 systemd 常駐（`/etc/systemd/system/whos-different.service`）：
 
 ```ini
 [Unit]
@@ -66,9 +81,9 @@ Restart=on-failure
 WantedBy=multi-user.target
 ```
 
-`/etc/whos-different.env` 內寫 `ADMIN_TOKEN=...`，權限設成 `600`。`systemctl enable --now whos-different`。
+`/etc/whos-different.env` 已在上面建立（內容是 `ADMIN_TOKEN=...`，權限 `600`）。啟動：`sudo systemctl enable --now whos-different`，再用 `curl http://localhost:3000/healthz` 確認。
 
-**更新：** `git pull && npm ci && npm run build && systemctl restart whos-different`。重啟會讓進行中的房間全部消失（[已知限制](known-limitations.md)），請在沒有人玩的時候更新。
+**更新：** 在 `/opt/whos-different` 以服務帳號執行 `git pull && npm ci && npm run build`，再 `sudo systemctl restart whos-different`。重啟會讓進行中的房間全部消失（[已知限制](known-limitations.md)），請在沒有人玩的時候更新。
 
 ## B. 用 Docker 跑
 

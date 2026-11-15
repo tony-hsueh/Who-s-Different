@@ -1,4 +1,5 @@
-// Returns the origin (plus optional path prefix) the QR code and room link are built from.
+// Returns the origin the QR code and room link are built from. The app is served from the
+// root of its origin, so a path prefix would only produce links that 404.
 export function parsePublicBaseUrl(raw: string | undefined): string | null {
   const value = raw?.trim();
   if (!value) return null;

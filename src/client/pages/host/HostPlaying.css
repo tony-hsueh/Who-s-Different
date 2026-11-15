@@ -19,7 +19,7 @@
 }
 
 .host-playing__grid {
-  --avatar-size: 7rem;
+  --avatar-size: 7.5rem;
   --fs-small: 1.5rem;
 
   align-self: stretch;

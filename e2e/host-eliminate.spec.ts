@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { io, type Socket } from 'socket.io-client';
-import type { PlayerPrivateState, PublicRoomState } from '../src/shared/index.js';
+import type {
+  PlayerPrivateState,
+  PublicRoomState,
+} from '../src/shared/index.js';
 
 // The player join form arrives with PR-10, so players join over a plain socket here.
 // PR-14 replaces this with real player browsers.
@@ -194,7 +197,8 @@ test('double-clicking confirm sends one elimination, then the screen moves on', 
   baseURL,
 }) => {
   const { sent } = recordTraffic(page);
-  const { phones } = await startGame(page, baseURL!, 4);
+  // Seven players: no single elimination can end the game, so the reveal always follows.
+  const { phones } = await startGame(page, baseURL!, 7);
 
   await avatar(page, '玩家2').click();
   await dialog(page).getByRole('button', { name: '確認淘汰' }).dblclick();
@@ -258,7 +262,10 @@ test('the host page never receives secret words or roles of living players', asy
   baseURL,
 }) => {
   const { traffic } = recordTraffic(page);
-  const { phones } = await startGame(page, baseURL!, 4);
+  const { phones } = await startGame(page, baseURL!, 7);
+  // Guard against a recorder that silently sees nothing.
+  await expect.poll(() => traffic.join('').includes('room:state')).toBe(true);
+  expect(traffic.some((t) => t.includes('"phase":"playing"'))).toBe(true);
   const words = [
     ...new Set(phones.map((p) => last(p.privates).secretWord as string)),
   ];

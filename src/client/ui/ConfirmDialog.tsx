@@ -35,9 +35,11 @@ export function ConfirmDialog({
   // Read through a ref so a parent's inline callback does not restart the focus handling.
   const onCancelRef = useRef(onCancel);
   const enterRef = useRef<(() => void) | null>(null);
+  const ownsEnterRef = useRef(false);
   useEffect(() => {
     onCancelRef.current = onCancel;
-    enterRef.current = confirmOnEnter && !confirmDisabled ? onConfirm : null;
+    ownsEnterRef.current = confirmOnEnter;
+    enterRef.current = confirmDisabled ? null : onConfirm;
   });
 
   useEffect(() => {
@@ -50,17 +52,19 @@ export function ConfirmDialog({
         onCancelRef.current();
         return;
       }
-      if (event.key === 'Enter') {
-        // A held key repeats; the keypress that opened the dialog must not confirm it.
-        if (event.repeat || !enterRef.current) return;
+      if (event.key === 'Enter' && ownsEnterRef.current) {
+        // Always take over Enter here, or the focused cancel button would still activate natively.
         event.preventDefault();
-        enterRef.current();
+        // A held key repeats; the keypress that opened the dialog must not confirm it.
+        if (!event.repeat) enterRef.current?.();
         return;
       }
       if (event.key !== 'Tab') return;
       // Keep Tab inside the dialog so the page behind it cannot be reached.
       const buttons = [
-        ...(dialogRef.current?.querySelectorAll('button') ?? []),
+        ...(dialogRef.current?.querySelectorAll<HTMLButtonElement>(
+          'button:not(:disabled)',
+        ) ?? []),
       ];
       const first = buttons[0];
       const last = buttons[buttons.length - 1];

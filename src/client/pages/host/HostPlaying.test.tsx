@@ -139,6 +139,28 @@ describe('HostPlaying screen', () => {
     expect(socket.requestsFor('game:eliminate')).toHaveLength(0);
   });
 
+  it('swallows a repeated Enter instead of letting it press cancel', async () => {
+    await openPlaying(state());
+    fireEvent.click(avatarButton(2));
+    const notPrevented = fireEvent.keyDown(
+      screen.getByRole('button', { name: '取消' }),
+      { key: 'Enter', repeat: true },
+    );
+    expect(notPrevented).toBe(false);
+    expect(dialog()).not.toBeNull();
+  });
+
+  it('keeps Tab inside the dialog while the confirm button is locked', async () => {
+    await openPlaying(state());
+    fireEvent.click(avatarButton(2));
+    fireEvent.click(confirmButton());
+    const cancel = screen.getByRole('button', { name: '取消' });
+    cancel.focus();
+    const notPrevented = fireEvent.keyDown(cancel, { key: 'Tab' });
+    expect(notPrevented).toBe(false);
+    expect(document.activeElement).toBe(cancel);
+  });
+
   it('sends game:eliminate with the round and player, and only once on a double click', async () => {
     await openPlaying(state({ roundNumber: 2 }));
     fireEvent.click(avatarButton(3));

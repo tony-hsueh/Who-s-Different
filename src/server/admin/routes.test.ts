@@ -74,3 +74,37 @@ describe('GET /admin/games/:gameId/events', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('GET /admin/rooms/:roomId/events', () => {
+  it('answers 401 without a token', async () => {
+    const res = await request(setup('s3cret')).get('/admin/rooms/r1/events');
+    expect(res.status).toBe(401);
+  });
+
+  it('is disabled with 404 when no admin token is configured', async () => {
+    const res = await request(setup(undefined))
+      .get('/admin/rooms/r1/events')
+      .set('Authorization', 'Bearer anything');
+    expect(res.status).toBe(404);
+  });
+
+  it('returns every event of the room, so a caller can learn the game ids', async () => {
+    const res = await request(setup('s3cret'))
+      .get('/admin/rooms/r1/events')
+      .set('Authorization', 'Bearer s3cret');
+    expect(res.status).toBe(200);
+    expect(res.body.events).toHaveLength(1);
+    expect(res.body.events[0]).toMatchObject({
+      eventType: 'GAME_STARTED',
+      roomId: 'r1',
+      gameId: 'g1',
+    });
+  });
+
+  it('returns 404 for a room that has no events', async () => {
+    const res = await request(setup('s3cret'))
+      .get('/admin/rooms/nope/events')
+      .set('Authorization', 'Bearer s3cret');
+    expect(res.status).toBe(404);
+  });
+});

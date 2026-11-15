@@ -42,6 +42,15 @@ export function createPresence({
   const tracker = new PresenceTracker(now);
   const published = new Set<string>();
   const timers = new Map<string, NodeJS.Timeout>();
+  const keysByRoom = new Map<string, Set<string>>();
+
+  function forget(key: string) {
+    const timer = timers.get(key);
+    if (timer) clearTimeout(timer);
+    timers.delete(key);
+    published.delete(key);
+    tracker.forget(key);
+  }
 
   function clearTimer(key: string) {
     const timer = timers.get(key);
@@ -69,6 +78,9 @@ export function createPresence({
     connect(socket: TrackedSocket, binding: Binding): void {
       const key = keyOf(binding);
       const seenBefore = tracker.get(key) !== undefined;
+      const keys = keysByRoom.get(binding.roomId) ?? new Set<string>();
+      keys.add(key);
+      keysByRoom.set(binding.roomId, keys);
       clearTimer(key);
       tracker.connect(key, socket.id);
       if (published.has(key)) return;
@@ -89,7 +101,7 @@ export function createPresence({
         if (tracker.isOnline(key)) return;
         published.delete(key);
         if (!publish(binding, false)) {
-          tracker.forget(key);
+          forget(key);
           return;
         }
         log(binding, 'DISCONNECTED');
@@ -99,10 +111,12 @@ export function createPresence({
     },
 
     forgetPlayer(playerId: string): void {
-      const key = `player:${playerId}`;
-      clearTimer(key);
-      published.delete(key);
-      tracker.forget(key);
+      forget(`player:${playerId}`);
+    },
+
+    forgetRoom(roomId: string): void {
+      for (const key of keysByRoom.get(roomId) ?? []) forget(key);
+      keysByRoom.delete(roomId);
     },
 
     close(): void {

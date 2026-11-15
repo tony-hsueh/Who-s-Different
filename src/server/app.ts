@@ -66,6 +66,7 @@ export function createApp({
     if (removed.length === 0) return;
     closeRooms(io, removed);
     for (const roomId of removed) {
+      presence.forgetRoom(roomId);
       logSafely(logger, { type: 'ROOM_CLOSED', roomId, payload: {} });
     }
   }, sweepIntervalMs);

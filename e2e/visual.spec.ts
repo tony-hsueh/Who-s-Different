@@ -226,3 +226,22 @@ test('secret card, both reveals and the finish screen on host and phone', async 
   await shot(phone, 'finished-phone');
   await context.close();
 });
+
+test.describe('dark mode', () => {
+  test.use({ colorScheme: 'dark' });
+
+  test('home and the lobby follow prefers-color-scheme', async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.goto('/');
+    await expect(page.locator('.wd-cover')).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => getComputedStyle(document.body).backgroundColor,
+      ),
+    ).toBe('rgb(20, 18, 43)');
+    await shot(page, 'home-dark');
+    await createRoom(page);
+    await expect(page.getByRole('button', { name: '開始遊戲' })).toBeVisible();
+    await shot(page, 'lobby-dark');
+  });
+});

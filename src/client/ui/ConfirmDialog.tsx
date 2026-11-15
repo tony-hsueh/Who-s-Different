@@ -9,6 +9,10 @@ export interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
+  // Locks the confirm button while the request it triggers is in flight.
+  confirmDisabled?: boolean;
+  // Enter confirms wherever focus is. Off by default, so Enter on the focused cancel button just cancels.
+  confirmOnEnter?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -20,6 +24,8 @@ export function ConfirmDialog({
   confirmLabel = '確定',
   cancelLabel = '取消',
   danger = false,
+  confirmDisabled = false,
+  confirmOnEnter = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -28,8 +34,10 @@ export function ConfirmDialog({
   const dialogRef = useRef<HTMLDivElement>(null);
   // Read through a ref so a parent's inline callback does not restart the focus handling.
   const onCancelRef = useRef(onCancel);
+  const enterRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     onCancelRef.current = onCancel;
+    enterRef.current = confirmOnEnter && !confirmDisabled ? onConfirm : null;
   });
 
   useEffect(() => {
@@ -40,6 +48,13 @@ export function ConfirmDialog({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onCancelRef.current();
+        return;
+      }
+      if (event.key === 'Enter') {
+        // A held key repeats; the keypress that opened the dialog must not confirm it.
+        if (event.repeat || !enterRef.current) return;
+        event.preventDefault();
+        enterRef.current();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -86,7 +101,11 @@ export function ConfirmDialog({
           <Button ref={cancelRef} variant="secondary" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm}>
+          <Button
+            variant={danger ? 'danger' : 'primary'}
+            disabled={confirmDisabled}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </Button>
         </div>

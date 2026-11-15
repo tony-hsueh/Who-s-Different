@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { io, type Socket } from 'socket.io-client';
-import type { PlayerPrivateState, PublicRoomState } from '../src/shared';
+import type { PlayerPrivateState, PublicRoomState } from '../src/shared/index.js';
 
 // The player join form arrives with PR-10, so players join over a plain socket here.
 // PR-14 replaces this with real player browsers.

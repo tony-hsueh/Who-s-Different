@@ -104,7 +104,7 @@ curl http://localhost:3000/healthz
 ```
 
 - Event Log 在容器內的 `/data/events.db`（`LOG_DB_PATH` 預設值），用 volume 保存，容器重建後仍在。
-- 映像檔沒有 `tsx`，所以沒有 `npm run logs` CLI。查 Log 用 HTTP 端點（[event-log.md](event-log.md)），或 `docker cp whos-different:/data/events.db .` 把檔案複製出來，在有原始碼的機器上用 `LOG_DB_PATH=./events.db npm run logs -- --private`。
+- 映像檔沒有 `tsx`，所以沒有 `npm run logs` CLI。查 Log 用 HTTP 端點（[event-log.md](event-log.md)），或把資料庫複製出來，在有原始碼的機器上用 `LOG_DB_PATH=./events.db npm run logs -- --private` 查。Server 運作中直接 `docker cp` 可能複製到寫到一半的檔案，所以要先停容器：`docker stop whos-different && docker cp whos-different:/data/events.db . && docker start whos-different`（停容器會讓進行中的房間消失，請在沒有人玩的時候做）。
 - 更新：重新 `docker build`，`docker rm -f` 舊的再 `docker run`。同樣會讓進行中的房間消失。
 
 ## HTTPS 與 WebSocket 反向代理

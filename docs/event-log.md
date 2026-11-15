@@ -55,9 +55,9 @@ sqlite3 data/events.db "select timestamp, event_type, player_id, payload from ga
 
 ## Game ID 查得到什麼
 
-`--game` 與 `/admin/games/:gameId/events` 只回有 Game ID 的事件：`GAME_STARTED`、`WORDS_ASSIGNED`、`ROUND_STARTED`、`ELIMINATION_CONFIRMED`、`PLAYER_ELIMINATED`、`ROUND_SKIPPED`、`WIN_CONDITION_MET`、`GAME_FINISHED`、`GAME_RESET`，以及遊戲進行中發生的 `OPERATION_IGNORED`、`OPERATION_REJECTED`。
+`--game` 與 `/admin/games/:gameId/events` 只回有 Game ID 的事件：`GAME_STARTED`、`WORDS_ASSIGNED`、`ROUND_STARTED`、`ELIMINATION_CONFIRMED`、`PLAYER_ELIMINATED`、`ROUND_SKIPPED`、`WIN_CONDITION_MET`、`GAME_FINISHED`、`GAME_RESET`，以及遊戲進行中發生的 `OPERATION_IGNORED`、`OPERATION_REJECTED`、`SERVER_ERROR`（後兩者看送出請求的連線綁定在哪個房間、該房間當時有沒有遊戲）。
 
-**這些事件沒有 Game ID，只查得到房間：** `ROOM_CREATED`、`HOST_AUTHENTICATED`、`PLAYER_JOINED`、`PLAYER_AUTHENTICATED`、`PLAYER_LEFT`、`PLAYER_DISCONNECTED`、`PLAYER_RECONNECTED`、`HOST_DISCONNECTED`、`HOST_RECONNECTED`，以及沒有綁定身分的請求被拒絕（`room_id` 是空字串，哪個房間都查不到）。查連線問題請用 `--room <roomId>`，再依 `player_id` 與時間過濾。（這是 QA 時從 18 場遊戲的 Log 數出來的，哪些事件帶 Game ID 以 `src/server/` 寫入處為準。）
+**這些事件沒有 Game ID，只查得到房間：** `ROOM_CREATED`、`HOST_AUTHENTICATED`、`PLAYER_JOINED`、`PLAYER_AUTHENTICATED`、`PLAYER_LEFT`、`PLAYER_DISCONNECTED`、`PLAYER_RECONNECTED`、`HOST_DISCONNECTED`、`HOST_RECONNECTED`、`ROOM_CLOSED`，以及沒有綁定身分的請求被拒絕（`room_id` 是空字串，哪個房間都查不到）。查連線問題請用 `--room <roomId>`，再依 `player_id` 與時間過濾。（這是 QA 時從 18 場遊戲的 Log 數出來的，哪些事件帶 Game ID 以 `src/server/` 寫入處為準。）
 
 ## 事件清單
 

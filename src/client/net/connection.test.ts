@@ -157,6 +157,7 @@ describe('host identity', () => {
     store.setIdentity({ kind: 'host', roomId: 'r1' });
     socket.serverConnect();
     socket.answer('host:auth', fail('TOKEN_EXPIRED'));
+    expect(onError).toHaveBeenCalledWith('TOKEN_EXPIRED');
     expect(store.getSnapshot().status).toBe('no-token');
     expect(readHostToken('r1')).toBeNull();
   });

@@ -191,6 +191,7 @@ export class ConnectionStore {
       case 'INVALID_TOKEN':
       case 'TOKEN_EXPIRED':
         this.clearToken(identity);
+        this.onError(ack.code);
         this.update({ status: 'no-token' });
         return;
       default:

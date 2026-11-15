@@ -11,6 +11,7 @@
     "src/shared/**/*.test.ts",
     "tests",
     "e2e",
+    "scripts",
     "vite.config.ts",
     "vitest.config.ts",
     "playwright.config.ts"

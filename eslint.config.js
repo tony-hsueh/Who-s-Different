@@ -27,6 +27,7 @@ export default defineConfig(
       'src/server/**/*.ts',
       'tests/**/*.ts',
       'e2e/**/*.ts',
+      'scripts/**/*.mjs',
       'scripts/**/*.ts',
       'scripts/**/*.mjs',
       '*.config.{js,ts}',

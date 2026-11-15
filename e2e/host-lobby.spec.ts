@@ -71,7 +71,7 @@ test('players appear live, start needs 4, and a reload keeps the lobby', async (
   await expect(startButton(page)).toBeEnabled();
 
   await startButton(page).click();
-  await expect(page.getByRole('heading', { name: '遊戲進行中' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Round 1' })).toBeVisible();
   await expect(startButton(page)).toHaveCount(0);
 });
 

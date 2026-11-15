@@ -65,7 +65,7 @@
 
 兩次都停在 `createHost`：`expect(page).toHaveURL(/\/host\/.+/)` 逾時 5 秒，網址還是 `/`。失敗時的頁面快照有錯誤提示「連線或伺服器出了問題，請稍後再試」。原因是首頁在 Socket.IO 連上之前按了「建立房間」（[QA-09](qa/bugs.md#qa-09)）：我另外把 Socket.IO 的回應延遲 1.5 秒，穩定重現同樣的提示。負載高、連線慢時就會踩到。
 
-改用 `--workers=2`（CI 的設定）後，完整 67 個測試通過（上表）。我沒有改 `playwright.config.ts`，也沒有改測試或程式，這一票只記錄並建議修（[known-limitations.md](known-limitations.md)）。第一次失敗的 `e2e.log` 被後來的重跑覆蓋，所以只保留第二次的紀錄；失敗的測試名稱與錯誤訊息兩次一致。
+改用 `--workers=2`（CI 的設定）後，完整 67 個測試通過（上表）。我沒有改 `playwright.config.ts`，也沒有改測試或程式，這一票只記錄並建議修（[known-limitations.md](known-limitations.md)）。第一次失敗的 `e2e.log` 被後來的重跑覆蓋，所以只保留第二次的紀錄；兩次失敗的測試不同（上面列的兩個），但錯誤訊息與原因一致。
 
 ## 多人操作測試證據
 

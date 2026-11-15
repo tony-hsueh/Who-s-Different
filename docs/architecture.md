@@ -142,7 +142,7 @@ sequenceDiagram
 
 - 路由：`/`（建立房間）、`/host/:roomId`（主持人）、`/room/:code`（玩家）。
 - 一個 `ConnectionStore` 管理 socket、驗證、重連與請求逾時，React 用 `useSyncExternalStore` 訂閱。
-- 畫面只顯示狀態，不做遊戲判斷。主持人按鈕送出的請求帶著當下的輪數，輪數不符就被 Server 拒絕，所以過時的確認視窗不會誤動作。
+- 畫面只顯示狀態，不做遊戲判斷。淘汰與「本輪無人淘汰」的請求（`game:eliminate`、`game:skip-round`）帶著當下的輪數，輪數不符就被 Server 拒絕，所以過時的確認視窗不會誤動作。開始、下一輪、再玩一場不帶參數，由 Server 依 phase 判斷，重複的請求視為已完成。
 - 樣式：純 CSS 加設計 token（`tokens.css`），支援 `prefers-color-scheme` 深色模式；頭像與封面是 repo 內自己畫的 SVG（[assets.md](assets.md)）。
 
 ## 相關文件

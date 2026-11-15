@@ -19,13 +19,29 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # One SQLite file for the whole run, so a failed run can upload it.
+      E2E_LOG_DB: ${{ github.workspace }}/e2e-logs/events.db
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.19'
+          cache: npm
+      - run: npm ci
       - run: npx playwright install --with-deps chromium
+      # playwright.config.ts builds and starts the server itself, with two workers and one retry.
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: failure()
         with:
-          name: playwright
+          name: e2e-failure
           path: |
             playwright-report
             test-results
+            e2e-logs
           if-no-files-found: ignore

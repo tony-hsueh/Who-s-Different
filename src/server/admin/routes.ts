@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { Router } from 'express';
-import { eventsForGame, type LogDb } from '../log/db.js';
+import { eventsForGame, eventsForRoom, type LogDb } from '../log/db.js';
 
 export interface AdminOptions {
   db: LogDb;
@@ -38,6 +38,16 @@ export function createAdminRouter(options: AdminOptions | undefined): Router {
     const events = eventsForGame(db, req.params.gameId);
     if (events.length === 0) {
       res.status(404).json({ error: 'GAME_NOT_FOUND' });
+      return;
+    }
+    res.json({ events });
+  });
+
+  // Lets a caller who only knows the room id (it is in the host URL) find the game ids.
+  router.get('/rooms/:roomId/events', (req, res) => {
+    const events = eventsForRoom(db, req.params.roomId);
+    if (events.length === 0) {
+      res.status(404).json({ error: 'ROOM_NOT_FOUND' });
       return;
     }
     res.json({ events });

@@ -1,4 +1,11 @@
-import { devices, expect, test, type Page } from '@playwright/test';
+import {
+  expect,
+  readSecretWord,
+  secretWordLocator,
+  startedGame as startedRealGame,
+  test,
+} from './helpers/index.js';
+import { devices, type Page } from '@playwright/test';
 import { io, type Socket } from 'socket.io-client';
 import type { Ack, Requests } from '../src/shared/protocol.js';
 
@@ -422,4 +429,54 @@ test('the finished screen shows the result, then a reset returns to waiting', as
   await expect(page.getByText('等待主持人開始')).toBeVisible();
   await expect(page.getByText('請看大螢幕')).toHaveCount(0);
   room.close();
+});
+
+// Scenarios 7 and 8 with a real host and four real phones.
+test('scenario 7: every player gets one of the two words, and only their own', async ({
+  browser,
+}) => {
+  const game = await startedRealGame(browser, 4);
+  expect(new Set(game.seats.map((s) => s.word))).toStrictEqual(
+    new Set([game.majorityWord, game.minorityWord]),
+  );
+  expect(game.minority).toHaveLength(1);
+
+  for (const seat of game.seats) {
+    const other =
+      seat.word === game.majorityWord ? game.minorityWord : game.majorityWord;
+    await seat.page.getByRole('button', { name: '查看題目' }).click();
+    await expect(secretWordLocator(seat.page)).toHaveText(seat.word);
+    const everything =
+      (await seat.page.content()) +
+      (await seat.page.locator('body').innerText());
+    expect(everything, `${seat.nickname} must not hold ${other}`).not.toContain(
+      other,
+    );
+    expect(await seat.page.locator('body').innerText()).not.toMatch(
+      /多數|少數|陣營/,
+    );
+  }
+});
+
+test('scenario 8: the word can be hidden and viewed again, and hides itself in the background', async ({
+  browser,
+}) => {
+  const game = await startedRealGame(browser, 4);
+  const seat = game.seats[0]!;
+  const { page } = seat;
+
+  await expect(page.getByText('點一下查看題目')).toBeVisible();
+  for (let i = 0; i < 3; i++) {
+    expect(await readSecretWord(page)).toBe(seat.word);
+    expect(await page.content()).not.toContain(seat.word);
+  }
+
+  await page.getByRole('button', { name: '查看題目' }).click();
+  await expect(secretWordLocator(page)).toBeVisible();
+  await setVisibility(page, 'hidden');
+  await expect(secretWordLocator(page)).toHaveCount(0);
+  expect(await page.content()).not.toContain(seat.word);
+  await setVisibility(page, 'visible');
+  await expect(secretWordLocator(page)).toHaveCount(0);
+  expect(await readSecretWord(page)).toBe(seat.word);
 });

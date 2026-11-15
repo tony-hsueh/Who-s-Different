@@ -7,6 +7,7 @@ import { FullscreenMessage } from '../../ui/FullscreenMessage';
 import { RoomInvalid } from '../RoomInvalid';
 import { HostFinished } from './HostFinished';
 import { HostLobby } from './HostLobby';
+import { HostNoAccess } from './HostNoAccess';
 import { HostPlaying } from './HostPlaying';
 import { HostReveal } from './HostReveal';
 
@@ -51,8 +52,10 @@ export function HostPage() {
   const state = useRoomState();
   const finishing = useRevealBeforeFinish(state);
 
-  // Without a valid host token this browser cannot run the room, so there is nothing to recover.
-  if (status === 'invalid' || status === 'no-token') return <RoomInvalid />;
+  // Only a server answer (room not found, or closed) proves the room is gone. With no usable
+  // token the room may well be running, this browser just cannot run it.
+  if (status === 'invalid') return <RoomInvalid />;
+  if (status === 'no-token') return <HostNoAccess />;
   if (!state) return <FullscreenMessage title="連線中…" />;
   if (state.phase === 'lobby') return <HostLobby state={state} />;
   if (state.phase === 'playing') return <HostPlaying state={state} />;

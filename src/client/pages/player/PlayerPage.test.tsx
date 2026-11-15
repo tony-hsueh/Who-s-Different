@@ -379,6 +379,33 @@ describe('secret card', () => {
     expect(screen.getByText('蘋果')).toBeDefined();
   });
 
+  it('tells the player what to do with the word, without naming a side', () => {
+    const { container } = openAs(playingRoom(), playing());
+    expect(
+      screen.getByText('看完詞語，輪到你時用一句話描述它，不要直接說出來'),
+    ).toBeDefined();
+    expect(container.textContent).not.toMatch(/多數|少數|陣營|平民|臥底/);
+  });
+
+  it('keeps the instruction during reveal', () => {
+    openAs(playingRoom('reveal'), playing({ phase: 'reveal' }));
+    expect(
+      screen.getByText('看完詞語，輪到你時用一句話描述它，不要直接說出來'),
+    ).toBeDefined();
+  });
+
+  it('drops the instruction once the player is out', () => {
+    openAs(
+      room({
+        phase: 'playing',
+        roundNumber: 1,
+        players: [{ ...players[0]!, eliminated: true }, players[1]!],
+      }),
+      playing({ eliminated: true }),
+    );
+    expect(screen.queryByText(/輪到你時用一句話描述它/)).toBeNull();
+  });
+
   it('does not show the player which side they are on', () => {
     const { container } = openAs(playingRoom(), playing());
     fireEvent.click(screen.getByRole('button', { name: '查看題目' }));

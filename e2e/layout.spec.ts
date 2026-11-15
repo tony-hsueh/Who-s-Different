@@ -69,11 +69,6 @@ test('a created room opens the host page and survives a reload', async ({
   await expect(page.getByText(/房間代碼/)).toBeVisible();
 });
 
-test('an unknown room shows 房間已失效', async ({ page }) => {
-  await page.goto('/host/does-not-exist');
-  await expect(page.getByRole('heading', { name: '房間已失效' })).toBeVisible();
-});
-
 test('the CSP does not block the app', async ({ page }) => {
   const violations: string[] = [];
   page.on('console', (msg) => {

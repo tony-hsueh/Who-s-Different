@@ -6,6 +6,7 @@
 
 ## 準備
 
+- 辦一場試玩、要用筆電在區網跑服務時，照 [playtest.md](playtest.md)（`npm run start:lan`、防火牆、手機連不上怎麼辦）。
 - 一台電腦跑服務（`npm run build && npm start`，或照 [deployment.md](deployment.md)），`PUBLIC_BASE_URL` 設成手機連得到的網址（區網 IP 或正式網址）。
 - 手機要連得到：同一個 Wi-Fi，或用 HTTPS 網址。
 - 測試用手機至少：iPhone（iOS Safari）一台、Android 手機（Chrome）一台。

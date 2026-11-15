@@ -46,7 +46,13 @@ export function SecretCard({
       >
         {eliminated ? '已淘汰' : '存活'}
       </p>
-      {eliminated && <p>你已淘汰，可以繼續觀戰</p>}
+      {eliminated ? (
+        <p>你已淘汰，可以繼續觀戰</p>
+      ) : (
+        <p className="wd-secret__instruction">
+          看完詞語，輪到你時用一句話描述它，不要直接說出來
+        </p>
+      )}
       <div className="wd-secret__panel" onClick={toggle}>
         {revealed ? (
           <p className="wd-secret__word">{word}</p>

@@ -51,6 +51,7 @@ export function createApp({
   pingTimeoutMs = DEFAULT_PING_TIMEOUT_MS,
 }: CreateAppOptions = {}) {
   const app = express();
+  app.disable('x-powered-by');
   const httpServer = createServer(app);
   const io: AppServer = new Server(httpServer, {
     pingInterval: pingIntervalMs,

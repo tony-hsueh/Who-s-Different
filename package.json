@@ -11,6 +11,7 @@
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "npm run clean && vite build && tsc -p tsconfig.server.json && node -e \"require('node:fs').cpSync('src/server/log/schema.sql','dist/server/server/log/schema.sql')\"",
     "start": "node dist/server/server/index.js",
+    "start:lan": "node scripts/start-lan.mjs",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json && tsc -p tsconfig.node.json",

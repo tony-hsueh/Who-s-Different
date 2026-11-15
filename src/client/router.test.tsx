@@ -86,6 +86,41 @@ describe('routes', () => {
   });
 });
 
+describe('host without a token', () => {
+  it('says this browser has no host permission, not that the room is gone', async () => {
+    const { router } = renderAt('/host/r1');
+    act(() => socket.serverConnect());
+    expect(
+      await screen.findByRole('heading', {
+        name: '這個瀏覽器沒有這個房間的主持權限',
+      }),
+    ).toBeDefined();
+    expect(screen.queryByRole('heading', { name: '房間已失效' })).toBeNull();
+    expect(screen.getByText(/房間可能還在/)).toBeDefined();
+    expect(socket.requestsFor('host:auth')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: '回首頁' }));
+    expect(router.state.location.pathname).toBe('/');
+  });
+
+  it('says the same when the server rejects the saved token', async () => {
+    saveHostToken('r1', 'bad');
+    renderAt('/host/r1');
+    act(() => socket.serverConnect());
+    act(() =>
+      socket.answer('host:auth', {
+        ok: false,
+        code: 'INVALID_TOKEN',
+        message: 'x',
+      }),
+    );
+    expect(
+      await screen.findByRole('heading', {
+        name: '這個瀏覽器沒有這個房間的主持權限',
+      }),
+    ).toBeDefined();
+  });
+});
+
 describe('invalid room', () => {
   it('shows 房間已失效 with a way home when the room does not exist', async () => {
     saveHostToken('gone', 'ht');

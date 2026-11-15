@@ -243,6 +243,9 @@ test('the card is hidden by default and toggles repeatedly', async ({
   expect(await page.content()).not.toContain(secret);
   await expect(page.getByText('第 1 輪')).toBeVisible();
   await expect(page.getByText('存活')).toBeVisible();
+  await expect(
+    page.getByText('看完詞語，輪到你時用一句話描述它，不要直接說出來'),
+  ).toBeVisible();
   await shot(page, 'card-hidden');
 
   for (let i = 0; i < 3; i++) {

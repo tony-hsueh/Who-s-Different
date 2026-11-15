@@ -7,7 +7,7 @@
 - [A. 直接用 Node 跑](#a-直接用-node-跑)
 - [B. 用 Docker 跑](#b-用-docker-跑)
 
-再加上 [HTTPS 與 WebSocket 反向代理](#https-與-websocket-反向代理)。只在區網內玩（同一個 Wi-Fi），不需要 HTTPS，A 之後直接用 `http://區網IP:3000`。
+再加上 [HTTPS 與 WebSocket 反向代理](#https-與-websocket-反向代理)。只在區網內玩（同一個 Wi-Fi），不需要 HTTPS，可以用 `npm run start:lan` 一行啟動，步驟見 [playtest.md](playtest.md)。
 
 ## 環境變數
 
@@ -154,6 +154,26 @@ server {
 ```
 
 要限制每個 IP 的連線與請求數（程式內的限流只以單一連線計，見 [QA-07](qa/bugs.md#qa-07)），可以用 Nginx 的 `limit_conn` 與 `limit_req`，再對 `/admin` 單獨加嚴。
+
+### 用隧道（不能直連區網時）
+
+公司 Wi-Fi 有「用戶端隔離」時，手機連不到筆電。可以在筆電上跑服務，再用隧道工具（例如 Cloudflare Tunnel 的 `cloudflared`）取得一個公開的 HTTPS 網址，手機走網際網路連進來。隧道會自己處理 HTTPS 與 WebSocket，Host 標頭也會保留。
+
+1. 先啟動隧道，把它指到本機的 3000 埠，記下它給的網址，例如 `https://xxxx.trycloudflare.com`：
+
+   ```bash
+   cloudflared tunnel --url http://localhost:3000
+   ```
+
+2. 另開一個終端機，用這個網址當 `PUBLIC_BASE_URL` 啟動服務（`start:lan` 看到已經設了 `PUBLIC_BASE_URL` 就不會覆蓋）：
+
+   ```bash
+   PUBLIC_BASE_URL=https://xxxx.trycloudflare.com npm run start:lan
+   ```
+
+3. 主持人用同一個網址打開，其餘照 [playtest.md](playtest.md)。
+
+> 這一段是照工具文件寫的，作者沒有實際跑過。隧道的網址任何人拿到都能連，玩完請關掉隧道。
 
 ### 設定完成後檢查
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsePublicBaseUrl } from './config.js';
+import { parsePublicBaseUrl, resolvePublicBaseUrl } from './config.js';
 
 describe('parsePublicBaseUrl', () => {
   it('returns null when unset or blank', () => {
@@ -33,5 +33,41 @@ describe('parsePublicBaseUrl', () => {
     expect(() => parsePublicBaseUrl('https://example.com/?a=1')).toThrow();
     expect(() => parsePublicBaseUrl('https://example.com/#x')).toThrow();
     expect(() => parsePublicBaseUrl('https://u:p@example.com')).toThrow();
+  });
+});
+
+describe('resolvePublicBaseUrl', () => {
+  it('prefers PUBLIC_BASE_URL over the Render url', () => {
+    expect(
+      resolvePublicBaseUrl({
+        PUBLIC_BASE_URL: 'https://game.example.com/',
+        RENDER_EXTERNAL_URL: 'https://wd.onrender.com',
+      }),
+    ).toBe('https://game.example.com');
+  });
+
+  it('falls back to RENDER_EXTERNAL_URL so the QR code uses the public Render url', () => {
+    expect(
+      resolvePublicBaseUrl({ RENDER_EXTERNAL_URL: 'https://wd.onrender.com' }),
+    ).toBe('https://wd.onrender.com');
+    expect(
+      resolvePublicBaseUrl({
+        PUBLIC_BASE_URL: '  ',
+        RENDER_EXTERNAL_URL: 'https://wd.onrender.com',
+      }),
+    ).toBe('https://wd.onrender.com');
+  });
+
+  it('returns null when neither is set', () => {
+    expect(resolvePublicBaseUrl({})).toBeNull();
+  });
+
+  it('still rejects a bad PUBLIC_BASE_URL instead of silently using Render', () => {
+    expect(() =>
+      resolvePublicBaseUrl({
+        PUBLIC_BASE_URL: 'https://example.com/wd',
+        RENDER_EXTERNAL_URL: 'https://wd.onrender.com',
+      }),
+    ).toThrow(/PUBLIC_BASE_URL/);
   });
 });

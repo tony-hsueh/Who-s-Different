@@ -25,3 +25,15 @@ export function parsePublicBaseUrl(raw: string | undefined): string | null {
   }
   return url.origin;
 }
+
+// An explicit PUBLIC_BASE_URL wins. On Render, RENDER_EXTERNAL_URL holds the service's
+// https://<name>.onrender.com address, so the QR code works without any manual setting.
+export function resolvePublicBaseUrl(env: {
+  PUBLIC_BASE_URL?: string;
+  RENDER_EXTERNAL_URL?: string;
+}): string | null {
+  return (
+    parsePublicBaseUrl(env.PUBLIC_BASE_URL) ??
+    parsePublicBaseUrl(env.RENDER_EXTERNAL_URL)
+  );
+}

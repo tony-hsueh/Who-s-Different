@@ -1,0 +1,19 @@
+# Render Blueprint：一個免費的 Docker web service，放在新加坡。
+# 步驟見 docs/deploy-render.md。遊戲狀態在記憶體，只能跑一個執行個體。
+services:
+  - type: web
+    name: whos-different
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      # 跟 Dockerfile 的 EXPOSE 一致。Render 預設 PORT 是 10000，明確設定比較不會對錯埠。
+      - key: PORT
+        value: '3000'
+      # Render 自動產生一組隨機值，不會進 repo。要查 Event Log 時到 Render 後台 Environment 複製。
+      - key: ADMIN_TOKEN
+        generateValue: true
+      # 不設 PUBLIC_BASE_URL：Server 會改用 Render 給的 RENDER_EXTERNAL_URL（https://<名稱>.onrender.com）。

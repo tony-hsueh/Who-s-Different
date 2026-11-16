@@ -63,7 +63,7 @@ npm ci && npm run build && npm run start:lan
 
 `start:lan` 自動找出區網 IP、設好 `PUBLIC_BASE_URL`、需要時產生 `ADMIN_TOKEN`，再啟動 `dist` 裡的 Server。完整步驟（防火牆、投影、手機連不上）見 [docs/playtest.md](docs/playtest.md)。
 
-部署到伺服器、加 HTTPS 與用 Docker，見 [docs/deployment.md](docs/deployment.md)。
+要讓同事用行動網路玩，最省事是免費部署到 Render，見 [docs/deploy-render.md](docs/deploy-render.md)。部署到自己的伺服器、加 HTTPS 與用 Docker，見 [docs/deployment.md](docs/deployment.md)。
 
 ## 環境變數
 
@@ -116,6 +116,7 @@ docs         文件
 | [docs/architecture.md](docs/architecture.md)                   | 架構圖、模組、資料流、秘密資料怎麼隔離           |
 | [docs/decisions.md](docs/decisions.md)                         | 各 PR 的設計決策與對 PRD 的假設                  |
 | [docs/playtest.md](docs/playtest.md)                           | 辦一場試玩的指南：主持人準備與同事怎麼玩         |
+| [docs/deploy-render.md](docs/deploy-render.md)                 | 免費部署到 Render 的步驟與限制                   |
 | [docs/deployment.md](docs/deployment.md)                       | 單一 Node 服務的部署、HTTPS 與 WebSocket、Docker |
 | [docs/event-log.md](docs/event-log.md)                         | 事件清單、查詢方式（CLI 與 HTTP）、清理          |
 | [docs/test-report.md](docs/test-report.md)                     | 單元與 E2E 結果、QA 結果                         |

@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
-import { parsePublicBaseUrl } from './config.js';
+import { resolvePublicBaseUrl } from './config.js';
 import { scheduleCleanup } from './log/cleanup.js';
 import { DEFAULT_LOG_DB_PATH, openLogDb } from './log/db.js';
 import { createSqliteLogger } from './log/logger.js';
@@ -27,7 +27,7 @@ const { httpServer } = createApp({
   clientDir,
   logger: createSqliteLogger(db),
   admin: adminToken ? { db, token: adminToken } : undefined,
-  publicBaseUrl: parsePublicBaseUrl(process.env.PUBLIC_BASE_URL),
+  publicBaseUrl: resolvePublicBaseUrl(process.env),
 });
 httpServer.listen(port, '0.0.0.0', () => {
   console.log(`listening on http://0.0.0.0:${port}`);
